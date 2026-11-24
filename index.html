@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CCNA 200-301 — Cisco Packet Tracer Lab &amp; 100Q Exam Simulator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Left Sidebar -->
+    <aside class="sidebar" aria-label="Primary Navigation">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="10" fill="url(#ciscoGrad)" />
+            <path d="M8 21V16M12 23V13M16 24V11M20 24V11M24 23V13M28 21V16" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+            <defs>
+              <linearGradient id="ciscoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#00BCEB" />
+                <stop offset="1" stop-color="#0468B5" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">NetCert<span class="brand-accent">Lab</span></span>
+          <span class="brand-sub">CCNA 200-301 Suite</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item" data-view="dashboard">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <rect x="3" y="3" width="6" height="6" rx="1.5" />
+            <rect x="11" y="3" width="6" height="6" rx="1.5" />
+            <rect x="3" y="11" width="6" height="6" rx="1.5" />
+            <rect x="11" y="11" width="6" height="6" rx="1.5" />
+          </svg>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item active" data-view="mock-exams" aria-current="page">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Z" />
+            <path d="M6.75 7.5h6.5M6.75 10.5h6.5M6.75 13.5h4" stroke-linecap="round" />
+          </svg>
+          <span>Mock Exams</span>
+          <span class="nav-pill" id="sidebarExamPill">6L+100Q</span>
+        </button>
+
+        <button class="nav-item" data-view="virtual-labs">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <rect x="2.5" y="4" width="15" height="10" rx="2" />
+            <path d="M6 8.5 8 10l-2 1.5M10 11.5h3.5M7 17h6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Virtual Labs</span>
+          <span class="nav-count">20 Pool</span>
+        </button>
+
+        <button class="nav-item" data-view="analytics">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M3.5 16.5h13M5.5 13.5v-3M10 13.5v-7M14.5 13.5v-5" stroke-linecap="round" />
+          </svg>
+          <span>Performance Analytics</span>
+        </button>
+
+        <button class="nav-item" data-view="materials">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v13.5H5.5A1.5 1.5 0 0 0 4 18V4.5Z" />
+            <path d="M4 15.5A1.5 1.5 0 0 1 5.5 14H16" />
+          </svg>
+          <span>Study Materials</span>
+        </button>
+
+        <button class="nav-item" data-view="settings">
+          <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="10" cy="10" r="2.75" />
+            <path d="M10 2.75v1.6M10 15.65v1.6M2.75 10h1.6M15.65 10h1.6M4.87 4.87l1.13 1.13M14 14l1.13 1.13M15.13 4.87 14 6M6 14l-1.13 1.13" stroke-linecap="round" />
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="readiness-card">
+          <div class="readiness-header">
+            <span>Exam Pool</span>
+            <strong class="text-cisco">1,000 Q / 20 Labs</strong>
+          </div>
+          <div class="mini-bar">
+            <div class="mini-bar-fill" id="sidebarProgressFill" style="width: 2%"></div>
+          </div>
+          <p class="readiness-meta" id="sidebarProgressMeta">Phase 1: Labs (0/6) &bull; Qs (0/100)</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Container -->
+    <div class="main-container">
+      <!-- Top Header -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="status-group">
+            <span class="status-tag status-blue">
+              <span class="dot dot-blue"></span>
+              Exam Mode: <strong id="modeStatusLabel">Active (Study)</strong>
+            </span>
+            <span class="status-tag status-green">
+              <span class="dot dot-green"></span>
+              Packet Tracer Engine: <strong>Online</strong>
+            </span>
+            <button id="pauseTimerBtn" class="timer-pill" title="Click to pause or resume exam countdown">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="10" cy="10.5" r="6.75" />
+                <path d="M10 7v3.75l2.5 1.5M8 2.25h4" stroke-linecap="round" />
+              </svg>
+              <span>Time:</span>
+              <strong id="timerDisplay" class="mono">02:00:00</strong>
+            </button>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button id="newExamBtn" class="ghost-btn accent-btn" title="Generate a fresh randomized 6-lab + 100-question exam">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6L3.5 7.25M3.5 3.75v3.5h3.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>New Exam</span>
+          </button>
+
+          <button id="submitExamBtn" class="ghost-btn submit-btn" title="Grade all 6 labs and 100 questions">
+            <span>Submit Exam</span>
+          </button>
+
+          <div class="profile-chip">
+            <div class="profile-meta">
+              <span class="profile-name">CCNA candidate</span>
+              <span class="profile-sub" id="profileSubText">Labs: 0/6 &bull; Qs: 0/100</span>
+            </div>
+            <div class="avatar-ring" title="Overall Exam Progress">
+              <svg class="ring-svg" viewBox="0 0 44 44">
+                <circle class="ring-track" cx="22" cy="22" r="19" />
+                <circle id="avatarRingArc" class="ring-progress" cx="22" cy="22" r="19" stroke-dasharray="119.38" stroke-dashoffset="119.38" />
+              </svg>
+              <div class="avatar-inner">CC</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW 1: MOCK EXAMS (Sequential 2-Phase Flow: Phase 1 = 6 Packet Tracer Labs -> Phase 2 = 100 Q&A) -->
+      <main class="exam-flow-shell view-section" id="view-mock-exams">
+        <!-- Exam Phase Stepper Bar -->
+        <div class="phase-stepper" role="tablist" aria-label="Exam Phases">
+          <button class="phase-step active" id="stepPhaseLabs" data-phase="labs">
+            <span class="phase-num">1</span>
+            <div class="phase-step-meta">
+              <strong>Part 1: Cisco Packet Tracer Labs</strong>
+              <span id="phaseLabsSub">Complete 6 hands-on labs first (0/6 solved)</span>
+            </div>
+            <span class="phase-badge" id="phaseLabsBadge">In Progress</span>
+          </button>
+
+          <div class="phase-connector" aria-hidden="true">→</div>
+
+          <button class="phase-step" id="stepPhaseQa" data-phase="qa">
+            <span class="phase-num">2</span>
+            <div class="phase-step-meta">
+              <strong>Part 2: Question &amp; Answer Portion</strong>
+              <span id="phaseQaSub">100 weighted CCNA questions (0/100 answered)</span>
+            </div>
+            <span class="phase-badge locked" id="phaseQaBadge">Complete/Skip 6 Labs First</span>
+          </button>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- PHASE 1: CISCO PACKET TRACER LAB SIMULATOR (LAB 1 OF 6 -> 6 OF 6) -->
+        <!-- ================================================================ -->
+        <section class="pt-shell" id="phaseLabsSection" aria-label="Cisco Packet Tracer Lab Simulator">
+          <!-- Packet Tracer Window Title & Classic Menu Bar -->
+          <div class="pt-window-chrome">
+            <div class="pt-titlebar">
+              <div class="pt-app-id">
+                <span class="pt-logo-dot">PT</span>
+                <strong id="ptWindowTitle">Cisco Packet Tracer — Lab 1 of 6: Extended ACL Traffic Filtering (.pka)</strong>
+              </div>
+              <div class="pt-lab-pills" id="labTabs" role="tablist" aria-label="Assigned 6 Exam Labs"></div>
+            </div>
+
+            <div class="pt-menubar">
+              <div class="pt-menus">
+                <span>File</span><span>Edit</span><span>Options</span><span>View</span><span>Tools</span><span>Extensions</span><span>Window</span><span>Help</span>
+              </div>
+              <div class="pt-toolbar-actions">
+                <button class="pt-tool-btn active" id="ptToolSelect" title="Select / Inspect Device (Esc)">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3.5l10 6.5-4.5 1.3-2.2 4.2L5 3.5z"/></svg>
+                  <span>Select</span>
+                </button>
+                <button class="pt-tool-btn" id="ptToolPdu" title="Send Simple PDU (Ping Test)">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="14" height="10" rx="1.5"/><path d="M3.5 6l6.5 5 6.5-5"/></svg>
+                  <span>Simple PDU</span>
+                </button>
+                <button class="pt-tool-btn" id="ptFastForwardBtn" title="Fast Forward Time (Converge STP / OSPF)">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5l5 4.5-5 4.5v-9zM11 5.5l5 4.5-5 4.5v-9z"/></svg>
+                  <span>Fast Forward</span>
+                </button>
+                <button class="pt-tool-btn" id="resetLabBtn" title="Reset Activity">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6L3.5 7.25M3.5 3.75v3.5h3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Reset</span>
+                </button>
+                <button class="pt-tool-btn" id="ptHelpQueryBtn" title="Show Available Configs (?) for Current IOS Mode">
+                  <span>? Config Help</span>
+                </button>
+                <button class="pt-tool-btn pt-verify-btn" id="cliVerifyBtn" title="Check Results / Verify Config">
+                  <span>✓ Check Results</span>
+                </button>
+                <button class="pt-tool-btn pt-solution-btn" id="cliSolutionBtn" title="Auto-apply Solution Commands (Study Mode)">
+                  <span>⚡ Solution</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Packet Tracer Main Split: Left = Logical Canvas + Device Window | Right = Activity Instructions -->
+          <div class="pt-workspace-grid">
+            <!-- Left Main Column: Logical Topology Canvas + Device CLI/Config/Physical Window -->
+            <div class="pt-left-stack">
+              <!-- Logical Canvas Panel -->
+              <div class="pt-canvas-panel">
+                <div class="pt-canvas-bar">
+                  <div class="pt-canvas-tabs">
+                    <span class="pt-ws-tab active">[Logical]</span>
+                    <span class="pt-ws-tab">[Physical]</span>
+                    <span class="pt-ws-crumb" id="topoCaption">Root / Lab Topology</span>
+                  </div>
+                  <div class="pt-link-legend">
+                    <span><i class="tri-dot green"></i> Up/Trusted</span>
+                    <span><i class="tri-dot orange"></i> Standby/Warn</span>
+                    <span><i class="tri-dot red"></i> Down/Alert</span>
+                  </div>
+                </div>
+
+                <div class="pt-canvas-stage" id="ptCanvasStage">
+                  <svg id="topologySvg" class="pt-svg" viewBox="0 0 680 285" role="img" aria-label="Cisco Packet Tracer Logical Topology"></svg>
+                </div>
+
+                <!-- Packet Tracer Bottom Realtime & PDU Bar -->
+                <div class="pt-bottom-bar">
+                  <div class="pt-mode-chip">
+                    <span class="dot dot-green"></span>
+                    <strong>Realtime</strong>
+                    <span class="mono" id="ptSimClock">00:00:00</span>
+                  </div>
+                  <div class="pt-pdu-status" id="ptPduStatus">
+                    Click a device on the Logical Workspace to open its CLI / Config, or click <strong>Simple PDU</strong> to test connectivity.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Packet Tracer Device Dialog (Physical | Config | CLI | Desktop) -->
+              <div class="pt-device-window">
+                <div class="pt-device-titlebar">
+                  <div class="pt-device-name">
+                    <span class="dot dot-blue"></span>
+                    <strong id="cliDeviceTitle">SW1 — Cisco IOS Device Console</strong>
+                  </div>
+                  <div class="pt-device-tabs" id="ptDeviceTabs">
+                    <button class="pt-dtab active" data-dtab="cli">CLI</button>
+                    <button class="pt-dtab" data-dtab="config">Config</button>
+                    <button class="pt-dtab" data-dtab="physical">Physical</button>
+                    <button class="pt-dtab" data-dtab="desktop">Desktop</button>
+                  </div>
+                </div>
+
+                <!-- Tab 1: Authentic Cisco IOS CLI -->
+                <div class="pt-dtab-pane" id="dtab-cli">
+                  <div class="cli-body pt-cli-body" id="cliBody" tabindex="0" aria-label="Interactive Cisco IOS CLI">
+                    <div class="cli-history" id="cliHistory"></div>
+                    <div class="cli-input-line" id="cliInputLine">
+                      <span class="cli-prompt" id="cliActivePrompt">SW1(config)#</span>
+                      <span class="cli-typed" id="cliTyped"></span><span class="cli-cursor" aria-hidden="true">_</span>
+                      <input id="cliHiddenInput" type="text" autocomplete="off" spellcheck="false" aria-label="Type Cisco IOS command" />
+                    </div>
+                  </div>
+                  <div class="cli-hint">
+                    Packet Tracer IOS Helper &bull; Press <code>?</code> anytime for available configs (e.g. <code>?</code>, <code>ip ?</code>, <code>switchport ?</code>) &bull; <code>Tab</code> auto-completes &bull; ↑/↓ history
+                  </div>
+                </div>
+
+                <!-- Tab 2: Config Summary Table -->
+                <div class="pt-dtab-pane hidden" id="dtab-config">
+                  <div class="pt-pane-inner" id="ptConfigPane"></div>
+                </div>
+
+                <!-- Tab 3: Physical Front Panel -->
+                <div class="pt-dtab-pane hidden" id="dtab-physical">
+                  <div class="pt-pane-inner" id="ptPhysicalPane"></div>
+                </div>
+
+                <!-- Tab 4: Desktop (IP Config & Ping) -->
+                <div class="pt-dtab-pane hidden" id="dtab-desktop">
+                  <div class="pt-pane-inner" id="ptDesktopPane"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Docked Panel: Packet Tracer Activity Wizard / Lab Instructions & Next/Skip Controls -->
+            <aside class="pt-activity-panel" aria-label="Packet Tracer Activity Instructions">
+              <div class="pt-activity-header">
+                <div class="eyebrow-row">
+                  <span class="lab-badge" id="labPasserBadge">Passer Lab #1</span>
+                  <span class="lab-score-pill" id="labOverallPill">0/6 Solved</span>
+                </div>
+                <h2 class="lab-title" id="labTitle">Lab 1 of 6: Extended ACL</h2>
+                <div class="pt-completion-box">
+                  <div class="pt-comp-labels">
+                    <span>Activity Completion</span>
+                    <strong class="mono text-cisco" id="ptCompletionPct">0%</strong>
+                  </div>
+                  <div class="progress-track">
+                    <div class="progress-fill" id="ptCompletionBar" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-activity-body">
+                <div class="pt-section-title">Scenario &amp; Topology Brief</div>
+                <p class="lab-scenario-text" id="labScenarioText"></p>
+
+                <div class="pt-section-title" style="margin-top: 14px;">Configuration Objectives</div>
+                <div class="lab-objectives" id="labObjectives"></div>
+
+                <div class="pt-helper-note" id="ptSkipNotice">
+                  <strong>Can't finish this lab?</strong> You can click <strong>Next Lab (Skip) &gt;</strong> below to move on and still reach the 100-question exam.
+                </div>
+              </div>
+
+              <!-- Lab Progression Footer: Previous Lab | Next Lab (or Proceed to 100Q Exam) -->
+              <div class="pt-activity-footer">
+                <button class="btn btn-secondary" id="prevLabBtn">&lt; Previous Lab</button>
+                <button class="btn btn-primary" id="nextLabBtn">Next Lab &gt;</button>
+              </div>
+              <div class="pt-skip-all-row">
+                <button class="mini-link-btn" id="jumpToQaBtn">Proceed Directly to 100-Question Q&amp;A →</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ================================================================ -->
+        <!-- PHASE 2: 100-QUESTION WRITTEN Q&A PORTION                        -->
+        <!-- ================================================================ -->
+        <section class="panel exam-panel qa-full-panel hidden" id="phaseQaSection" aria-label="100-Question Mock Exam">
+          <div class="panel-header exam-header">
+            <div>
+              <div class="eyebrow-row">
+                <span class="domain-badge" id="domainBadge">1.0 Network Fundamentals</span>
+                <span class="subtopic-badge" id="subtopicBadge">IPv4 Subnetting</span>
+                <span class="flag-badge hidden" id="flaggedBadge">Flagged</span>
+              </div>
+              <h1 class="exam-title" id="examTitle">CCNA 200-301 Practice Exam — Part 2: Written Q&amp;A (100 Questions)</h1>
+            </div>
+            <div class="qa-header-actions">
+              <button class="ghost-btn" id="backToLabsBtn">← Revisit 6 Labs (<span id="qaLabsDoneMini">0/6</span>)</button>
+            </div>
+          </div>
+
+          <!-- Progress & 100-Q Grid Toggle -->
+          <div class="progress-block">
+            <div class="progress-labels">
+              <span class="question-counter" id="questionCounter">Question 1 of 100</span>
+              <div class="progress-right-meta">
+                <span class="progress-stats" id="progressStats">0 Answered &bull; 0 Flagged</span>
+                <button id="toggleNavigatorBtn" class="mini-link-btn">100-Q Grid ▾</button>
+              </div>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill" style="width: 1%"></div>
+            </div>
+          </div>
+
+          <!-- Collapsible 100-Question Jump Drawer -->
+          <div class="question-grid-drawer hidden" id="questionGridDrawer">
+            <div class="drawer-header">
+              <div class="drawer-filters" id="gridFilters">
+                <button class="filter-chip active" data-filter="all">All (100)</button>
+                <button class="filter-chip" data-filter="unanswered">Unanswered</button>
+                <button class="filter-chip" data-filter="flagged">Flagged</button>
+                <button class="filter-chip" data-filter="1.0">1.0 (20)</button>
+                <button class="filter-chip" data-filter="2.0">2.0 (20)</button>
+                <button class="filter-chip" data-filter="3.0">3.0 (25)</button>
+                <button class="filter-chip" data-filter="4.0">4.0 (10)</button>
+                <button class="filter-chip" data-filter="5.0">5.0 (15)</button>
+                <button class="filter-chip" data-filter="6.0">6.0 (10)</button>
+              </div>
+              <div class="drawer-legend">
+                <span><i class="legend-dot current"></i> Current</span>
+                <span><i class="legend-dot answered"></i> Answered</span>
+                <span><i class="legend-dot flagged"></i> Flagged</span>
+              </div>
+            </div>
+            <div class="drawer-cells" id="questionGridCells"></div>
+          </div>
+
+          <!-- Question Body -->
+          <div class="question-body qa-centered-body">
+            <div class="question-stem-wrap">
+              <span class="q-badge" id="qBadge">Q1</span>
+              <div>
+                <p class="question-stem" id="questionStem"></p>
+                <span class="q-pool-id mono" id="qPoolId"></span>
+              </div>
+            </div>
+
+            <div class="options-list" id="optionsList" role="radiogroup" aria-label="Answer choices"></div>
+
+            <div class="explanation-wrap">
+              <button class="explain-toggle" id="explainToggle">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="10" cy="10" r="7.5" />
+                  <path d="M10 9v4.5M10 6.5h.01" stroke-linecap="round" />
+                </svg>
+                <span>Show Answer Explanation</span>
+              </button>
+              <div class="explanation-box hidden" id="explanationBox"></div>
+            </div>
+          </div>
+
+          <!-- Exam Footer Controls -->
+          <div class="exam-footer">
+            <button class="btn btn-secondary" id="prevBtn">&lt; Previous</button>
+            <button class="btn btn-warning" id="reviewBtn">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4.5 3.5v13M4.5 4.5h10l-2 3.25 2 3.25h-10" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>Mark for Review</span>
+            </button>
+            <button class="btn btn-primary" id="nextBtn">Next &gt;</button>
+          </div>
+        </section>
+      </main>
+
+      <!-- VIEW 2: DASHBOARD -->
+      <section class="page-view view-section hidden" id="view-dashboard">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-h1">CCNA 200-301 Exam Simulator Dashboard</h1>
+            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 20-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,000-question pool).</p>
+          </div>
+          <button class="btn btn-primary" id="dashStartExamBtn">Start Fresh Exam (6 Labs → 100 Qs)</button>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Total Question Pool</span>
+            <strong class="kpi-val text-cisco">1,000</strong>
+            <span class="kpi-sub">100 unique weighted questions per exam</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Packet Tracer Lab Pool</span>
+            <strong class="kpi-val text-green">20 Labs</strong>
+            <span class="kpi-sub">6 labs presented first (with Skip/Next)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Completed Attempts</span>
+            <strong class="kpi-val" id="kpiAttempts">0</strong>
+            <span class="kpi-sub">Target Cisco passing score: 825 / 1000</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Best Scaled Score</span>
+            <strong class="kpi-val" id="kpiBestScore">—</strong>
+            <span class="kpi-sub" id="kpiPassRate">Submit an exam to record your score</span>
+          </div>
+        </div>
+
+        <div class="two-col-cards">
+          <div class="panel card-pad">
+            <h2 class="card-h2">Official CCNA 200-301 Blueprint Weights</h2>
+            <p class="card-desc">Every 100-question exam is stratified strictly according to Cisco's domain percentages:</p>
+            <div id="blueprintTable" class="blueprint-list"></div>
+          </div>
+
+          <div class="panel card-pad">
+            <h2 class="card-h2">Recent Exam Attempts</h2>
+            <p class="card-desc">Your graded 6-lab + 100-question sessions saved locally.</p>
+            <div id="recentHistoryList" class="history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: VIRTUAL LABS (All 20 Labs Catalog) -->
+      <section class="page-view view-section hidden" id="view-virtual-labs">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-h1">Packet Tracer Virtual Labs Pool (20 Labs)</h1>
+            <p class="page-sub">Includes all 11 previous-passer topics (ACL, OSPF Election, VLAN, EtherChannel, Voice VLAN, CDP/LLDP, IPv4/IPv6, NAT, NTP, DHCP Snooping, DAI) + 9 blueprint labs.</p>
+          </div>
+          <div class="drawer-filters" id="labCatalogFilters">
+            <button class="filter-chip active" data-labfilter="all">All (20)</button>
+            <button class="filter-chip" data-labfilter="passer">Passer Topics (11)</button>
+            <button class="filter-chip" data-labfilter="blueprint">Blueprint Labs (9)</button>
+          </div>
+        </div>
+        <div class="lab-catalog-grid" id="labCatalogGrid"></div>
+      </section>
+
+      <!-- VIEW 4: PERFORMANCE ANALYTICS -->
+      <section class="page-view view-section hidden" id="view-analytics">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-h1">Performance Analytics</h1>
+            <p class="page-sub">Section-by-section mastery across all 6 CCNA 200-301 domains and hands-on lab proficiency.</p>
+          </div>
+          <button class="btn btn-secondary" id="analyticsGoExamBtn">Return to Active Exam</button>
+        </div>
+        <div class="two-col-cards">
+          <div class="panel card-pad">
+            <h2 class="card-h2">Current Session Section Accuracy</h2>
+            <p class="card-desc">Live breakdown of answered questions in your active 100-question exam.</p>
+            <div id="analyticsSectionBars" class="blueprint-list"></div>
+          </div>
+          <div class="panel card-pad">
+            <h2 class="card-h2">Active Exam Lab Progress (6 Drawn Labs)</h2>
+            <p class="card-desc">Status of the 6 randomized Packet Tracer labs in your current exam.</p>
+            <div id="analyticsLabList" class="history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 5: STUDY MATERIALS -->
+      <section class="page-view view-section hidden" id="view-materials">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-h1">CCNA 200-301 Quick Study Reference</h1>
+            <p class="page-sub">High-yield tables &amp; Cisco IOS command templates for all 11 passer lab topics.</p>
+          </div>
+        </div>
+        <div class="materials-grid">
+          <div class="panel card-pad">
+            <h2 class="card-h2">Administrative Distances</h2>
+            <table class="ref-table">
+              <thead><tr><th>Route Source</th><th>Default AD</th></tr></thead>
+              <tbody>
+                <tr><td>Directly Connected</td><td class="mono text-cisco">0</td></tr>
+                <tr><td>Static Route</td><td class="mono text-cisco">1</td></tr>
+                <tr><td>eBGP</td><td class="mono">20</td></tr>
+                <tr><td>Internal EIGRP</td><td class="mono">90</td></tr>
+                <tr><td>OSPF</td><td class="mono">110</td></tr>
+                <tr><td>IS-IS</td><td class="mono">115</td></tr>
+                <tr><td>RIP</td><td class="mono">120</td></tr>
+                <tr><td>External EIGRP</td><td class="mono">170</td></tr>
+                <tr><td>iBGP</td><td class="mono">200</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="panel card-pad">
+            <h2 class="card-h2">Syslog Severity Levels (0–7)</h2>
+            <table class="ref-table">
+              <thead><tr><th>Level</th><th>Keyword</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td class="mono text-red">0</td><td>Emergencies</td><td>System unusable</td></tr>
+                <tr><td class="mono text-red">1</td><td>Alerts</td><td>Immediate action</td></tr>
+                <tr><td class="mono text-orange">2</td><td>Critical</td><td>Critical condition</td></tr>
+                <tr><td class="mono text-orange">3</td><td>Errors</td><td>Error condition</td></tr>
+                <tr><td class="mono text-orange">4</td><td>Warnings</td><td>Warning condition</td></tr>
+                <tr><td class="mono text-cisco">5</td><td>Notifications</td><td>Normal significant</td></tr>
+                <tr><td class="mono text-cisco">6</td><td>Informational</td><td>Informational</td></tr>
+                <tr><td class="mono">7</td><td>Debugging</td><td>Debug messages</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="panel card-pad">
+            <h2 class="card-h2">Passer Lab Essential Commands</h2>
+            <pre class="ref-code">! DHCP Snooping &amp; DAI
+ip dhcp snooping
+ip dhcp snooping vlan 10
+int gi0/1 -&gt; ip dhcp snooping trust
+ip arp inspection vlan 10
+int gi0/1 -&gt; ip arp inspection trust
+
+! LACP EtherChannel &amp; Voice VLAN
+int range gi0/1 - 2 -&gt; channel-group 1 mode active
+int fa0/5 -&gt; switchport access vlan 10
+             switchport voice vlan 20
+
+! PAT Overload &amp; OSPF DR Priority
+ip nat inside source list 1 int gi0/1 overload
+int gi0/0 -&gt; ip ospf priority 200</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: SETTINGS -->
+      <section class="page-view view-section hidden" id="view-settings">
+        <div class="page-header-row">
+          <div>
+            <h1 class="page-h1">Simulator Settings</h1>
+            <p class="page-sub">Control exam strictness, study hints, and saved local history.</p>
+          </div>
+        </div>
+        <div class="panel card-pad" style="max-width: 680px;">
+          <div class="setting-row">
+            <div>
+              <strong>Study Mode (Allow Explanations &amp; Lab Solutions)</strong>
+              <p class="card-desc">When off (Strict Exam Mode), answer explanations and Packet Tracer solution shortcuts stay hidden until submission.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="studyModeToggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>Clear Saved Exam History</strong>
+              <p class="card-desc">Remove all locally stored attempt scores from browser storage.</p>
+            </div>
+            <button class="btn btn-secondary" id="clearHistoryBtn">Clear History</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Exam Submission Score Modal -->
+      <div class="modal-backdrop hidden" id="scoreModal" role="dialog" aria-modal="true" aria-labelledby="scoreModalTitle">
+        <div class="modal-card">
+          <div class="modal-header">
+            <div>
+              <span class="domain-badge" id="modalResultBadge">EXAM RESULT</span>
+              <h2 id="scoreModalTitle" class="exam-title" style="margin-top:6px;">CCNA 200-301 Score Report</h2>
+            </div>
+            <button class="icon-btn" id="closeModalBtn" title="Close">✕</button>
+          </div>
+          <div class="modal-body" id="scoreModalBody"></div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="modalReviewBtn">Review Exam Answers</button>
+            <button class="btn btn-primary" id="modalNewExamBtn">Start New Exam (6 Labs → 100 Qs)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-toast hidden" id="viewToast" role="status"></div>
+    </div>
+  </div>
+
+  <!-- Offline Data Pools (1,000 Questions + 20 Labs) -->
+  <script src="data/questions.js"></script>
+  <script src="data/labs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

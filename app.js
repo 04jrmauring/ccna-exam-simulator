@@ -3,8 +3,8 @@
   const LAB_POOL = window.CCNA_LAB_POOL || [];
   const BLUEPRINT = window.CCNA_BLUEPRINT || [];
   const HISTORY_KEY = "ccna_200_301_exam_history_v1";
-  const SEEN_Q_KEY = "ccna_200_301_seen_questions_v2";
-  const SEEN_LAB_KEY = "ccna_200_301_seen_labs_v2";
+  const SEEN_Q_KEY = "ccna_200_301_seen_questions_v3";
+  const SEEN_LAB_KEY = "ccna_200_301_seen_labs_v3";
 
   function cryptoRandFloat() {
     if (window.crypto && window.crypto.getRandomValues) {

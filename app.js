@@ -146,25 +146,53 @@
     lab.objectives.forEach((o) => {
       if (o.preCompleted) completedIds.add(o.id);
     });
-    const iosBanner = [
-      {
-        type: "out",
-        text: `Cisco IOS Software, ${lab.deviceName} Virtual Lab (${lab.id}) — Packet Tracer Engine\nPress RETURN or type Cisco IOS commands below.`,
-      },
-      ...lab.initialHistory.map((h) => ({ ...h, type: "cmd" })),
-    ];
-    const primaryNode = lab.nodes.find((n) => n.selected) || lab.nodes[0];
+    const devList = lab.devices && lab.devices.length ? lab.devices : [lab.deviceName || "R1"];
+    const deviceSessions = {};
+    devList.forEach((devName) => {
+      const devObjCount = lab.objectives.filter((o) => (o.device || devList[0]) === devName).length;
+      deviceSessions[devName] = {
+        deviceName: devName,
+        mode: "config",
+        prompt: `${devName}(config)#`,
+        history: [
+          {
+            type: "out",
+            text: `Cisco IOS Software — ${devName} Console (${lab.id})\nTarget tasks on ${devName}: ${devObjCount} objective(s). Press '?' anytime for IOS config help.`,
+          },
+          { type: "cmd", prompt: `${devName}#`, cmd: "configure terminal" },
+        ],
+        cmdHistory: [],
+        cmdCursor: -1,
+      };
+    });
+    const primaryNode = lab.nodes.find((n) => n.label === devList[0]) || lab.nodes.find((n) => n.selected) || lab.nodes[0];
     return {
       lab,
-      mode: lab.initialMode || "config",
-      prompt: lab.initialPrompt || `${lab.deviceName}(config)#`,
-      history: iosBanner,
+      activeDevice: devList[0],
+      deviceSessions,
       completedIds,
       skipped: false,
       selectedNodeId: primaryNode ? primaryNode.id : "N1",
-      cmdHistory: [],
-      cmdCursor: -1,
     };
+  }
+
+  function getActiveSession(ls) {
+    return ls.deviceSessions[ls.activeDevice] || Object.values(ls.deviceSessions)[0];
+  }
+
+  function getDeviceProgress(ls, devName) {
+    const devObjs = ls.lab.objectives.filter((o) => (o.device || ls.activeDevice) === devName);
+    const done = devObjs.filter((o) => ls.completedIds.has(o.id)).length;
+    return { done, total: devObjs.length };
+  }
+
+  function switchLabDevice(ls, devName) {
+    if (!ls || !ls.deviceSessions[devName]) return;
+    ls.activeDevice = devName;
+    const matchNode = ls.lab.nodes.find((n) => n.label === devName);
+    if (matchNode) ls.selectedNodeId = matchNode.id;
+    renderLab();
+    if (state.ptDeviceTab === "cli") el.cliHiddenInput.focus();
   }
 
   function loadHistory() {
@@ -441,15 +469,37 @@
       el.labTabs.appendChild(btn);
     });
 
-    // Objectives Checklist
+    // Objectives Checklist (grouped/tagged by device; clicking switches to that device's CLI!)
     el.labObjectives.innerHTML = "";
     lab.objectives.forEach((obj) => {
       const done = ls.completedIds.has(obj.id);
+      const targetDev = obj.device || ls.activeDevice;
+      const isActiveDev = targetDev === ls.activeDevice;
+      const cleanText = obj.text.replace(/^\[[^\]]+\]\s*/, "");
       const row = document.createElement("div");
-      row.className = `obj-item${done ? " done" : ""}`;
-      row.innerHTML = `<span class="obj-check">${done ? "✓" : ""}</span><span>${escapeHtml(obj.text)}</span>`;
+      row.className = `obj-item${done ? " done" : ""}${isActiveDev && !done ? " active-dev" : ""}`;
+      row.title = `Click to switch CLI console to ${targetDev}`;
+      row.innerHTML = `<span class="obj-check">${done ? "✓" : ""}</span><span><span class="obj-dev-tag">${escapeHtml(targetDev)}</span>${escapeHtml(cleanText)}</span>`;
+      row.addEventListener("click", () => switchLabDevice(ls, targetDev));
       el.labObjectives.appendChild(row);
     });
+
+    // Multi-Device Switcher Bar in PT Device Window
+    const switcher = document.getElementById("ptDeviceSwitcher");
+    if (switcher) {
+      const devs = lab.devices || Object.keys(ls.deviceSessions);
+      switcher.innerHTML = `<span class="pt-switcher-label">Configure Devices (${devs.length}):</span>`;
+      devs.forEach((devName) => {
+        const prog = getDeviceProgress(ls, devName);
+        const devDone = prog.total > 0 && prog.done === prog.total;
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = `pt-dev-pill${devName === ls.activeDevice ? " active" : ""}${devDone ? " done" : ""}`;
+        pill.innerHTML = `<span>${escapeHtml(devName)}</span><span class="pt-dev-count">${devDone ? "✓" : `${prog.done}/${prog.total}`}</span>`;
+        pill.addEventListener("click", () => switchLabDevice(ls, devName));
+        switcher.appendChild(pill);
+      });
+    }
 
     // Update Next / Skip Button Text Clearly
     el.prevLabBtn.disabled = state.currentLabIdx === 0;
@@ -465,9 +515,10 @@
     renderPacketTracerCanvas(ls);
     renderDevicePanes(ls);
 
-    // CLI History
+    // Active Device CLI History
+    const sess = getActiveSession(ls);
     el.cliHistory.innerHTML = "";
-    ls.history.forEach((line) => {
+    sess.history.forEach((line) => {
       const div = document.createElement("div");
       div.className = "cli-line";
       if (line.type === "cmd") {
@@ -477,7 +528,7 @@
       }
       el.cliHistory.appendChild(div);
     });
-    el.cliActivePrompt.textContent = ls.prompt;
+    el.cliActivePrompt.textContent = sess.prompt;
     el.cliTyped.textContent = "";
     el.cliHiddenInput.value = "";
     el.cliBody.scrollTop = el.cliBody.scrollHeight;
@@ -562,14 +613,20 @@
       svg += `<text x="${mx}" y="${my + 2}" text-anchor="middle" fill="#0f172a" font-family="monospace" font-size="9.5" font-weight="700">${escapeHtml(lk.label)}</text>`;
     });
 
-    // Draw Authentic Cisco Packet Tracer Device Icons
+    // Draw Authentic Cisco Packet Tracer Device Icons (with CLI badge for configurable devices)
     lab.nodes.forEach((nd) => {
       const p = nodePos[nd.id];
-      const isSelected = ls.selectedNodeId === nd.id;
+      const isSelected = ls.selectedNodeId === nd.id || nd.label === ls.activeDevice;
+      const isCfg = Boolean(ls.deviceSessions[nd.label]);
       svg += `<g class="pt-node${isSelected ? " selected" : ""}" data-nodeid="${nd.id}" transform="translate(${p.cx}, ${p.cy})">`;
       svg += `<rect class="pt-node-halo" x="-48" y="-34" width="96" height="84" rx="10" />`;
       svg += getCiscoPtDeviceSvg(nd.type);
-      // Label Pill underneath icon (classic Packet Tracer clean typography)
+      if (isCfg) {
+        const prog = getDeviceProgress(ls, nd.label);
+        const done = prog.total > 0 && prog.done === prog.total;
+        svg += `<rect x="14" y="-31" width="32" height="15" rx="4" fill="${done ? "#16a34a" : "#0284c7"}" stroke="#ffffff" stroke-width="1"/>`;
+        svg += `<text x="30" y="-20.5" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="8.2" font-weight="800">${done ? "✓ OK" : `${prog.done}/${prog.total}`}</text>`;
+      }
       svg += `<text x="0" y="32" text-anchor="middle" fill="#0f172a" font-size="11.5" font-weight="700">${escapeHtml(nd.label)}</text>`;
       svg += `<text x="0" y="45" text-anchor="middle" fill="#475569" font-size="9.5" font-family="monospace" font-weight="600">${escapeHtml(nd.sub)}</text>`;
       svg += `</g>`;
@@ -577,7 +634,7 @@
 
     el.topologySvg.innerHTML = svg;
 
-    // Bind Click on Devices (Select device -> open its CLI/Config OR send Simple PDU ping!)
+    // Bind Click on Devices (Switches active CLI console when clicking any configurable device!)
     el.topologySvg.querySelectorAll(".pt-node").forEach((g) => {
       g.addEventListener("click", () => {
         const nd = lab.nodes.find((n) => n.id === g.dataset.nodeid);
@@ -587,11 +644,16 @@
           const ok = isLabSolved(ls) || nd.status !== "red";
           el.ptPduStatus.innerHTML = `<strong>Simple PDU (ICMP)</strong> to <strong>${escapeHtml(nd.label)}</strong> (${escapeHtml(nd.sub)}): <span style="color:${ok ? "#4ade80" : "#f87171"};font-weight:700">${ok ? "Successful (TTL=255, 1ms)" : "Failed — Check Lab Configuration"}</span>`;
           showToast(`PDU Ping to ${nd.label}: ${ok ? "Successful" : "Failed (policy/config incomplete)"}`);
+          renderPacketTracerCanvas(ls);
+          renderDevicePanes(ls);
+        } else if (ls.deviceSessions[nd.label]) {
+          el.ptPduStatus.innerHTML = `Opened CLI Console for <strong>${escapeHtml(nd.label)}</strong> (${escapeHtml(nd.sub)}).`;
+          switchLabDevice(ls, nd.label);
         } else {
-          el.ptPduStatus.innerHTML = `Selected <strong>${escapeHtml(nd.label)}</strong> (${escapeHtml(nd.sub)}) &mdash; Viewing <strong>${state.ptDeviceTab.toUpperCase()}</strong> tab below.`;
+          el.ptPduStatus.innerHTML = `Inspecting endpoint <strong>${escapeHtml(nd.label)}</strong> (${escapeHtml(nd.sub)}) — console stays on <strong>${escapeHtml(ls.activeDevice)}</strong>.`;
+          renderPacketTracerCanvas(ls);
+          renderDevicePanes(ls);
         }
-        renderPacketTracerCanvas(ls);
-        renderDevicePanes(ls);
       });
     });
   }
@@ -637,7 +699,7 @@
     const { lab } = ls;
     const nd = lab.nodes.find((n) => n.id === ls.selectedNodeId) || lab.nodes[0];
     const solved = isLabSolved(ls);
-    el.cliDeviceTitle.textContent = `${nd ? nd.label : lab.deviceName} — Cisco Packet Tracer Device Window (${lab.deviceName} Console Active)`;
+    el.cliDeviceTitle.textContent = `${ls.activeDevice} — Cisco Packet Tracer Console (${(lab.devices || [ls.activeDevice]).length} Devices to Configure)`;
 
     // Config Tab
     const rows = lab.links
@@ -987,24 +1049,24 @@
   function showContextHelp(currentText) {
     const ls = state.examLabs[state.currentLabIdx];
     if (!ls) return;
-    const mode = ls.mode || "config";
+    const sess = getActiveSession(ls);
+    const mode = sess.mode || "config";
     const { entries, leafDesc } = resolveIosContext(mode, currentText);
 
     // Echo command + '?' just like Cisco Packet Tracer / IOS
-    ls.history.push({ type: "cmd", prompt: ls.prompt, cmd: `${currentText}?` });
+    sess.history.push({ type: "cmd", prompt: sess.prompt, cmd: `${currentText}?` });
 
     if (entries.length > 0) {
       const lines = entries
         .map(([k, v]) => `  ${k.padEnd(20, " ")}${v.desc}`)
         .join("\n");
-      ls.history.push({ type: "out", text: lines });
+      sess.history.push({ type: "out", text: lines });
     } else if (leafDesc) {
-      ls.history.push({ type: "out", text: `  <parameters>        ${leafDesc}\n  <cr>` });
+      sess.history.push({ type: "out", text: `  <parameters>        ${leafDesc}\n  <cr>` });
     } else {
-      ls.history.push({ type: "out", cls: "warn", text: "% Unrecognized command at '^' marker. Type '?' on an empty line for available commands." });
+      sess.history.push({ type: "out", cls: "warn", text: "% Unrecognized command at '^' marker. Type '?' on an empty line for available commands." });
     }
 
-    // Re-render history while keeping user's typed prefix intact!
     renderLab();
     el.cliHiddenInput.value = currentText;
     el.cliTyped.textContent = currentText;
@@ -1014,13 +1076,13 @@
   function tryTabAutocomplete(currentText) {
     const ls = state.examLabs[state.currentLabIdx];
     if (!ls) return currentText;
+    const sess = getActiveSession(ls);
     const trimmed = currentText.trim();
     if (!trimmed || /\s$/.test(currentText)) return currentText;
-    const { entries, completedTokens } = resolveIosContext(ls.mode || "config", currentText);
+    const { entries, completedTokens } = resolveIosContext(sess.mode || "config", currentText);
     const nonPlaceholder = entries.filter(([k]) => !k.startsWith("<"));
     if (nonPlaceholder.length === 1) {
-      const completed = [...completedTokens, nonPlaceholder[0][0]].join(" ") + " ";
-      return completed;
+      return [...completedTokens, nonPlaceholder[0][0]].join(" ") + " ";
     }
     if (nonPlaceholder.length > 1) {
       showContextHelp(currentText);
@@ -1028,29 +1090,30 @@
     return currentText;
   }
 
-  // Interactive Cisco IOS CLI Engine
-  function executeCliCommand(raw) {
+  // Interactive Multi-Device Cisco IOS CLI Engine
+  function executeCliCommand(raw, explicitDevice = null) {
     const ls = state.examLabs[state.currentLabIdx];
     if (!ls) return;
+    const dev = explicitDevice || ls.activeDevice;
+    const sess = ls.deviceSessions[dev] || getActiveSession(ls);
     const cmd = raw.trim();
     if (cmd.endsWith("?")) {
       showContextHelp(cmd.slice(0, -1));
       return;
     }
-    ls.history.push({ type: "cmd", prompt: ls.prompt, cmd });
+    sess.history.push({ type: "cmd", prompt: sess.prompt, cmd });
     if (cmd) {
-      ls.cmdHistory.push(cmd);
-      ls.cmdCursor = ls.cmdHistory.length;
+      sess.cmdHistory.push(cmd);
+      sess.cmdCursor = sess.cmdHistory.length;
     } else {
       renderLab();
       return;
     }
 
     const lower = cmd.toLowerCase();
-    const dev = ls.lab.deviceName;
 
     if (lower === "clear") {
-      ls.history = [];
+      sess.history = [];
       renderLab();
       return;
     }
@@ -1060,84 +1123,105 @@
     }
     if (lower === "verify" || lower.startsWith("show ") || lower.startsWith("do show ") || lower.startsWith("sh ")) {
       if (lower.includes("run")) {
-        const applied = ls.history
+        const applied = sess.history
           .filter((h) => h.type === "cmd" && !h.cmd.startsWith("!") && !/^(sh|show|verify|clear|\?|help)/i.test(h.cmd))
           .map((h) => "  " + h.cmd)
           .join("\n");
-        ls.history.push({ type: "out", text: `Building configuration...\nhostname ${dev}\n${applied || "  ! (No user commands applied yet)"}` });
+        sess.history.push({ type: "out", text: `Building configuration...\nhostname ${dev}\n${applied || "  ! (No user commands applied on " + dev + " yet)"}` });
       } else {
         const doneCount = ls.completedIds.size;
         const totalObj = ls.lab.objectives.length;
-        ls.history.push({
+        const perDevSummary = (ls.lab.devices || [dev])
+          .map((d) => {
+            const p = getDeviceProgress(ls, d);
+            return `${d}: ${p.done}/${p.total}`;
+          })
+          .join(" | ");
+        sess.history.push({
           type: "out",
           cls: doneCount === totalObj ? "success" : "",
-          text: `${ls.lab.verifyOutput}\n[Packet Tracer Activity Check: ${doneCount}/${totalObj} objectives completed (${Math.round((doneCount / totalObj) * 100)}%)]`,
+          text: `${ls.lab.verifyOutput}\n[Multi-Device Check: ${perDevSummary} — Overall ${doneCount}/${totalObj} (${Math.round((doneCount / totalObj) * 100)}%)]`,
         });
       }
       renderLab();
       return;
     }
 
-    // Mode Transitions
+    // Mode Transitions (per-device!)
     if (lower === "end") {
-      ls.mode = "priv";
-      ls.prompt = `${dev}#`;
-      ls.history.push({ type: "out", text: "%SYS-5-CONFIG_I: Configured from console by console" });
+      sess.mode = "priv";
+      sess.prompt = `${dev}#`;
+      sess.history.push({ type: "out", text: "%SYS-5-CONFIG_I: Configured from console by console" });
     } else if (lower === "exit") {
-      if (ls.mode !== "config" && ls.mode !== "priv") {
-        ls.mode = "config";
-        ls.prompt = `${dev}(config)#`;
+      if (sess.mode !== "config" && sess.mode !== "priv") {
+        sess.mode = "config";
+        sess.prompt = `${dev}(config)#`;
       } else {
-        ls.mode = "priv";
-        ls.prompt = `${dev}#`;
+        sess.mode = "priv";
+        sess.prompt = `${dev}#`;
       }
     } else if (lower === "enable" || lower === "en") {
-      ls.mode = "priv";
-      ls.prompt = `${dev}#`;
+      sess.mode = "priv";
+      sess.prompt = `${dev}#`;
     } else if (lower === "conf t" || lower === "configure terminal") {
-      ls.mode = "config";
-      ls.prompt = `${dev}(config)#`;
+      sess.mode = "config";
+      sess.prompt = `${dev}(config)#`;
     } else if (/^int(erface)?\s+/i.test(cmd)) {
-      ls.mode = "config-if";
-      ls.prompt = `${dev}(config-if)#`;
+      sess.mode = "config-if";
+      sess.prompt = `${dev}(config-if)#`;
     } else if (/^vlan\s+\d+/i.test(cmd)) {
-      ls.mode = "config-vlan";
-      ls.prompt = `${dev}(config-vlan)#`;
+      sess.mode = "config-vlan";
+      sess.prompt = `${dev}(config-vlan)#`;
     } else if (/^router\s+ospf/i.test(cmd)) {
-      ls.mode = "config-router";
-      ls.prompt = `${dev}(config-router)#`;
+      sess.mode = "config-router";
+      sess.prompt = `${dev}(config-router)#`;
     } else if (/^ip\s+access-list\s+/i.test(cmd)) {
-      ls.mode = "config-acl";
-      ls.prompt = `${dev}(config-std-nacl)#`;
+      sess.mode = "config-acl";
+      sess.prompt = `${dev}(config-std-nacl)#`;
     } else if (/^line\s+vty/i.test(cmd)) {
-      ls.mode = "config-line";
-      ls.prompt = `${dev}(config-line)#`;
+      sess.mode = "config-line";
+      sess.prompt = `${dev}(config-line)#`;
     } else if (/^ip\s+dhcp\s+pool/i.test(cmd)) {
-      ls.mode = "config-dhcp";
-      ls.prompt = `${dev}(dhcp-config)#`;
+      sess.mode = "config-dhcp";
+      sess.prompt = `${dev}(dhcp-config)#`;
     }
 
-    // Grade against Lab Objectives
+    // Grade strictly against objectives belonging to THIS active device!
     let newlyMatched = 0;
     ls.lab.objectives.forEach((obj) => {
-      if (!ls.completedIds.has(obj.id) && obj.pattern.test(cmd)) {
+      if ((obj.device || dev) === dev && !ls.completedIds.has(obj.id) && obj.pattern.test(cmd)) {
         ls.completedIds.add(obj.id);
         newlyMatched++;
       }
     });
 
     if (newlyMatched > 0) {
+      const devProg = getDeviceProgress(ls, dev);
       if (isLabSolved(ls)) {
         ls.skipped = false;
-        ls.history.push({ type: "out", cls: "success", text: `✓ Activity 100% Complete on ${dev}! Click "Next Lab >" to continue.` });
-        showToast(`Lab ${state.currentLabIdx + 1}/6 (${ls.lab.title}) completed at 100%!`);
+        sess.history.push({ type: "out", cls: "success", text: `✓ Activity 100% Complete across all devices! Click "Next Lab >" to continue.` });
+        if (!explicitDevice) showToast(`Lab ${state.currentLabIdx + 1}/6 (${ls.lab.title}) completed at 100%!`);
+      } else if (devProg.done === devProg.total) {
+        sess.history.push({ type: "out", cls: "success", text: `✓ All tasks on ${dev} complete (${devProg.done}/${devProg.total})! Switch to the next device to finish this lab.` });
       } else {
-        ls.history.push({ type: "out", cls: "success", text: `✓ Objective matched (${ls.completedIds.size}/${ls.lab.objectives.length}).` });
+        sess.history.push({ type: "out", cls: "success", text: `✓ Objective matched on ${dev} (${devProg.done}/${devProg.total} on ${dev}; ${ls.completedIds.size}/${ls.lab.objectives.length} total).` });
+      }
+    } else if (!explicitDevice) {
+      // Helpful hint if user typed a valid command meant for a different device
+      const wrongDevObj = ls.lab.objectives.find((o) => o.device !== dev && !ls.completedIds.has(o.id) && o.pattern.test(cmd));
+      if (wrongDevObj) {
+        sess.history.push({
+          type: "out",
+          cls: "warn",
+          text: `ℹ Note: That command matches an objective on ${wrongDevObj.device}. Click ${wrongDevObj.device} above (or on the topology) to apply it on ${wrongDevObj.device}.`,
+        });
       }
     }
 
-    renderLab();
-    renderAnalytics();
+    if (!explicitDevice) {
+      renderLab();
+      renderAnalytics();
+    }
   }
 
   // ============================================================================
@@ -1577,21 +1661,26 @@
       el.cliHiddenInput.value = "";
       el.cliTyped.textContent = "";
       executeCliCommand(val);
-    } else if (e.key === "ArrowUp" && ls && ls.cmdHistory.length > 0) {
-      e.preventDefault();
-      ls.cmdCursor = Math.max(0, ls.cmdCursor - 1);
-      el.cliHiddenInput.value = ls.cmdHistory[ls.cmdCursor] || "";
-      el.cliTyped.textContent = el.cliHiddenInput.value;
-    } else if (e.key === "ArrowDown" && ls && ls.cmdHistory.length > 0) {
-      e.preventDefault();
-      ls.cmdCursor = Math.min(ls.cmdHistory.length, ls.cmdCursor + 1);
-      el.cliHiddenInput.value = ls.cmdHistory[ls.cmdCursor] || "";
-      el.cliTyped.textContent = el.cliHiddenInput.value;
+    } else if (e.key === "ArrowUp" && ls) {
+      const sess = getActiveSession(ls);
+      if (sess && sess.cmdHistory.length > 0) {
+        e.preventDefault();
+        sess.cmdCursor = Math.max(0, sess.cmdCursor - 1);
+        el.cliHiddenInput.value = sess.cmdHistory[sess.cmdCursor] || "";
+        el.cliTyped.textContent = el.cliHiddenInput.value;
+      }
+    } else if (e.key === "ArrowDown" && ls) {
+      const sess = getActiveSession(ls);
+      if (sess && sess.cmdHistory.length > 0) {
+        e.preventDefault();
+        sess.cmdCursor = Math.min(sess.cmdHistory.length, sess.cmdCursor + 1);
+        el.cliHiddenInput.value = sess.cmdHistory[sess.cmdCursor] || "";
+        el.cliTyped.textContent = el.cliHiddenInput.value;
+      }
     }
   });
 
   document.getElementById("ptHelpQueryBtn").addEventListener("click", () => {
-    // Switch to CLI tab if user was on Config/Physical/Desktop
     const cliTabBtn = document.querySelector('.pt-dtab[data-dtab="cli"]');
     if (cliTabBtn) cliTabBtn.click();
     showContextHelp(el.cliHiddenInput.value);
@@ -1601,7 +1690,13 @@
   el.cliSolutionBtn.addEventListener("click", () => {
     const ls = state.examLabs[state.currentLabIdx];
     if (!ls) return;
-    ls.lab.solution.forEach((cmd) => executeCliCommand(cmd));
+    const sols = ls.lab.solutions || {};
+    Object.entries(sols).forEach(([devName, cmds]) => {
+      cmds.forEach((cmd) => executeCliCommand(cmd, devName));
+    });
+    renderLab();
+    renderAnalytics();
+    showToast(`Applied multi-device solution across ${Object.keys(sols).join(", ")} — click each device tab to review its CLI commands.`);
   });
   el.resetLabBtn.addEventListener("click", () => {
     const currentLab = state.examLabs[state.currentLabIdx].lab;

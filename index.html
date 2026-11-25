@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CCNA 200-301 — Cisco Packet Tracer Lab &amp; 100Q Exam Simulator</title>
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
   <div class="app-shell">
@@ -258,12 +258,12 @@
                 </div>
               </div>
 
-              <!-- Packet Tracer Device Dialog (Physical | Config | CLI | Desktop) -->
+              <!-- Packet Tracer Device Dialog (Multi-Device Switcher + Physical | Config | CLI | Desktop) -->
               <div class="pt-device-window">
                 <div class="pt-device-titlebar">
                   <div class="pt-device-name">
                     <span class="dot dot-blue"></span>
-                    <strong id="cliDeviceTitle">SW1 — Cisco IOS Device Console</strong>
+                    <strong id="cliDeviceTitle">R1 — Cisco IOS Device Console</strong>
                   </div>
                   <div class="pt-device-tabs" id="ptDeviceTabs">
                     <button class="pt-dtab active" data-dtab="cli">CLI</button>
@@ -272,6 +272,7 @@
                     <button class="pt-dtab" data-dtab="desktop">Desktop</button>
                   </div>
                 </div>
+                <div class="pt-device-switcher" id="ptDeviceSwitcher" aria-label="Switch Configurable Lab Devices"></div>
 
                 <!-- Tab 1: Authentic Cisco IOS CLI -->
                 <div class="pt-dtab-pane" id="dtab-cli">
@@ -651,9 +652,9 @@ int gi0/0 -&gt; ip ospf priority 200</pre>
     </div>
   </div>
 
-  <!-- Offline Data Pools (1,000 Questions v2 + 20 Labs) -->
-  <script src="data/questions.js?v=2"></script>
-  <script src="data/labs.js?v=2"></script>
-  <script src="app.js?v=2"></script>
+  <!-- Offline Data Pools (1,000 Questions v2 + 20 Multi-Device Labs v3) -->
+  <script src="data/questions.js?v=3"></script>
+  <script src="data/labs.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

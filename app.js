@@ -3,32 +3,142 @@
   const LAB_POOL = window.CCNA_LAB_POOL || [];
   const BLUEPRINT = window.CCNA_BLUEPRINT || [];
   const HISTORY_KEY = "ccna_200_301_exam_history_v1";
+  const SEEN_Q_KEY = "ccna_200_301_seen_questions_v2";
+  const SEEN_LAB_KEY = "ccna_200_301_seen_labs_v2";
+
+  function cryptoRandFloat() {
+    if (window.crypto && window.crypto.getRandomValues) {
+      const buf = new Uint32Array(1);
+      window.crypto.getRandomValues(buf);
+      return buf[0] / 4294967296;
+    }
+    return Math.random();
+  }
 
   function shuffleCopy(arr) {
     const copy = arr.slice();
     for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(cryptoRandFloat() * (i + 1));
       [copy[i], copy[j]] = [copy[j], copy[i]];
     }
     return copy;
   }
 
-  // Draw 100 weighted questions (20/20/25/10/15/10) from the 1,000-question pool
-  function drawWeighted100Questions() {
-    const drawn = [];
-    BLUEPRINT.forEach((sec) => {
-      const bucket = QUESTION_POOL.filter((q) => q.sectionCode === sec.code);
-      drawn.push(...shuffleCopy(bucket).slice(0, sec.examCount));
+  function loadIdSet(key) {
+    try {
+      const arr = JSON.parse(localStorage.getItem(key) || "[]");
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveIdSet(key, setObj) {
+    try {
+      localStorage.setItem(key, JSON.stringify([...setObj]));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  // Spread selections evenly across distinct subtopics so an exam never clumps identical topics
+  function pickDiverseFromBucket(items, count) {
+    const bySub = new Map();
+    shuffleCopy(items).forEach((q) => {
+      const k = q.subtopic || "General";
+      if (!bySub.has(k)) bySub.set(k, []);
+      bySub.get(k).push(q);
     });
+    const keys = shuffleCopy([...bySub.keys()]);
+    const result = [];
+    while (result.length < count && keys.length > 0) {
+      for (let i = keys.length - 1; i >= 0 && result.length < count; i--) {
+        const list = bySub.get(keys[i]);
+        if (list && list.length > 0) {
+          result.push(list.pop());
+        }
+        if (!list || list.length === 0) {
+          keys.splice(i, 1);
+        }
+      }
+    }
+    return result;
+  }
+
+  // Draw 100 weighted questions (20/20/25/10/15/10) with ZERO repeats across up to 10 consecutive exams (1,000 Qs)
+  function drawWeighted100Questions() {
+    const seenQ = loadIdSet(SEEN_Q_KEY);
+    const drawn = [];
+    let deckResetOccurred = false;
+
+    BLUEPRINT.forEach((sec) => {
+      const allInSec = QUESTION_POOL.filter((q) => q.sectionCode === sec.code);
+      let unseen = allInSec.filter((q) => !seenQ.has(q.id));
+      let picked = [];
+
+      if (unseen.length >= sec.examCount) {
+        picked = pickDiverseFromBucket(unseen, sec.examCount);
+      } else {
+        // Take all remaining unseen questions in this section, then cycle fresh
+        picked = shuffleCopy(unseen);
+        const pickedIds = new Set(picked.map((q) => q.id));
+        allInSec.forEach((q) => seenQ.delete(q.id));
+        deckResetOccurred = true;
+        const refillPool = allInSec.filter((q) => !pickedIds.has(q.id));
+        picked.push(...pickDiverseFromBucket(refillPool, sec.examCount - picked.length));
+      }
+
+      picked.forEach((q) => seenQ.add(q.id));
+      drawn.push(...picked);
+    });
+
+    saveIdSet(SEEN_Q_KEY, seenQ);
+    if (deckResetOccurred) {
+      showToast("You completed a full 1,000-question cycle! Reshuffled the deck for fresh exams.");
+    }
     return shuffleCopy(drawn).map((q, index) => ({ ...q, examNumber: index + 1 }));
   }
 
-  // Draw 6 unique labs from the 20-lab pool (at least 4 passer labs + 2 blueprint labs)
+  // Draw 6 unique labs from the 20-lab pool prioritizing unseen labs first
   function draw6Labs() {
-    const passerLabs = shuffleCopy(LAB_POOL.filter((l) => l.passerTag.startsWith("Passer Lab")));
-    const blueprintLabs = shuffleCopy(LAB_POOL.filter((l) => !l.passerTag.startsWith("Passer Lab")));
-    const selected = shuffleCopy([...passerLabs.slice(0, 4), ...blueprintLabs.slice(0, 2)]);
-    return selected.map((lab) => createLabSessionState(lab));
+    const seenLabs = loadIdSet(SEEN_LAB_KEY);
+    let unseen = LAB_POOL.filter((l) => !seenLabs.has(l.id));
+    let selected = [];
+
+    if (unseen.length >= 6) {
+      const unseenPasser = shuffleCopy(unseen.filter((l) => l.passerTag.startsWith("Passer Lab")));
+      const unseenBp = shuffleCopy(unseen.filter((l) => !l.passerTag.startsWith("Passer Lab")));
+      const takePasser = unseenPasser.slice(0, Math.min(4, unseenPasser.length));
+      const remaining = 6 - takePasser.length;
+      const takeBp = unseenBp.slice(0, Math.min(remaining, unseenBp.length));
+      selected = [...takePasser, ...takeBp];
+      if (selected.length < 6) {
+        const chosenIds = new Set(selected.map((l) => l.id));
+        const extra = shuffleCopy(unseen.filter((l) => !chosenIds.has(l.id)));
+        selected.push(...extra.slice(0, 6 - selected.length));
+      }
+    } else {
+      selected = shuffleCopy(unseen);
+      const chosenIds = new Set(selected.map((l) => l.id));
+      seenLabs.clear();
+      const refill = shuffleCopy(LAB_POOL.filter((l) => !chosenIds.has(l.id)));
+      selected.push(...refill.slice(0, 6 - selected.length));
+    }
+
+    selected.forEach((l) => seenLabs.add(l.id));
+    saveIdSet(SEEN_LAB_KEY, seenLabs);
+    return shuffleCopy(selected).map((lab) => createLabSessionState(lab));
+  }
+
+  function updateUnseenDeckLabel() {
+    const seenQ = loadIdSet(SEEN_Q_KEY);
+    const seenL = loadIdSet(SEEN_LAB_KEY);
+    const remQ = Math.max(0, QUESTION_POOL.length - seenQ.size);
+    const remL = Math.max(0, LAB_POOL.length - seenL.size);
+    const elDeck = document.getElementById("unseenDeckStatus");
+    if (elDeck) {
+      elDeck.textContent = `${remQ} / ${QUESTION_POOL.length} unseen questions • ${remL} / ${LAB_POOL.length} unseen labs remaining before deck reshuffle.`;
+    }
   }
 
   function createLabSessionState(lab) {
@@ -273,9 +383,11 @@
     setExamPhase("labs");
     renderDashboard();
     renderAnalytics();
+    updateUnseenDeckLabel();
     switchView("mock-exams");
     if (!silent) {
-      showToast("Started new exam: Part 1 loads 6 Packet Tracer labs first, followed by 100 weighted questions.");
+      const rem = Math.max(0, QUESTION_POOL.length - loadIdSet(SEEN_Q_KEY).size);
+      showToast(`Fresh exam loaded: 6 labs + 100 brand-new questions (${rem} unseen left in 1,000-Q pool).`);
     }
   }
 
@@ -1593,6 +1705,13 @@
     localStorage.removeItem(HISTORY_KEY);
     renderDashboard();
     showToast("Cleared saved exam history.");
+  });
+
+  document.getElementById("resetDeckBtn").addEventListener("click", () => {
+    localStorage.removeItem(SEEN_Q_KEY);
+    localStorage.removeItem(SEEN_LAB_KEY);
+    updateUnseenDeckLabel();
+    showToast("Unseen 1,000-question & 20-lab deck reset! Click 'New Exam' for a fresh draw.");
   });
 
   // Boot Exam -> Part 1: Lab 1 of 6 (Cisco Packet Tracer)

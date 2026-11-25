@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CCNA 200-301 — Cisco Packet Tracer Lab &amp; 100Q Exam Simulator</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2" />
 </head>
 <body>
   <div class="app-shell">
@@ -614,6 +614,13 @@ int gi0/0 -&gt; ip ospf priority 200</pre>
           </div>
           <div class="setting-row">
             <div>
+              <strong>No-Repeat Question &amp; Lab Deck</strong>
+              <p class="card-desc" id="unseenDeckStatus">Tracks seen questions so 10 consecutive exams (1,000 questions) never repeat.</p>
+            </div>
+            <button class="btn btn-secondary" id="resetDeckBtn">Reset Seen Deck</button>
+          </div>
+          <div class="setting-row">
+            <div>
               <strong>Clear Saved Exam History</strong>
               <p class="card-desc">Remove all locally stored attempt scores from browser storage.</p>
             </div>
@@ -644,9 +651,9 @@ int gi0/0 -&gt; ip ospf priority 200</pre>
     </div>
   </div>
 
-  <!-- Offline Data Pools (1,000 Questions + 20 Labs) -->
-  <script src="data/questions.js"></script>
-  <script src="data/labs.js"></script>
-  <script src="app.js"></script>
+  <!-- Offline Data Pools (1,000 Questions v2 + 20 Labs) -->
+  <script src="data/questions.js?v=2"></script>
+  <script src="data/labs.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

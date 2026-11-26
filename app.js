@@ -947,6 +947,64 @@
           type: "out",
           text: `Building configuration...\n!\nhostname ${dev}\n!\n${applied || "  ! (No configuration commands applied on " + dev + " yet)"}\n!\nend`,
         });
+      } else if (lower.includes("cdp")) {
+        const cdpDisabledGlobally = sess.appliedConfigs.some((c) => /^no cdp run$/i.test(c));
+        const timerMatch = [...sess.appliedConfigs].reverse().find((c) => /^cdp timer \d+/i.test(c));
+        const holdMatch = [...sess.appliedConfigs].reverse().find((c) => /^cdp holdtime \d+/i.test(c));
+        const timerVal = timerMatch ? timerMatch.split(/\s+/)[2] : "60";
+        const holdVal = holdMatch ? holdMatch.split(/\s+/)[2] : "180";
+        if (cdpDisabledGlobally) {
+          sess.history.push({ type: "out", text: "% CDP is not enabled" });
+        } else if (lower.includes("neighbors detail")) {
+          const peers = (ls.lab.nodes || []).filter((n) => n.label !== dev && (n.type === "router" || n.type === "switch"));
+          const detail = peers
+            .map((p, idx) => `-------------------------\nDevice ID: ${p.label}\nEntry address(es): IP address: 10.0.0.${idx + 11}\nPlatform: cisco ${p.type === "router" ? "ISR4331" : "WS-C2960X"}, Capabilities: ${p.type === "router" ? "Router" : "Switch IGMP"}\nInterface: GigabitEthernet0/${idx + 1},  Port ID (outgoing port): GigabitEthernet0/${idx + 1}\nHoldtime : ${holdVal} sec\nVersion : Cisco IOS Software, Version 15.2(4)M`)
+            .join("\n");
+          sess.history.push({ type: "out", text: detail || "Total cdp entries displayed : 0" });
+        } else if (lower.includes("neighbors")) {
+          const peers = (ls.lab.nodes || []).filter((n) => n.label !== dev && (n.type === "router" || n.type === "switch"));
+          const rows = peers
+            .map((p, idx) => `${p.label.padEnd(14, " ")}Gig 0/${idx + 1}       ${holdVal.padEnd(9, " ")}${p.type === "router" ? "R S I" : "S I  "}    ${p.type === "router" ? "ISR4331" : "C2960X "}  Gig 0/${idx + 1}`)
+            .join("\n");
+          sess.history.push({
+            type: "out",
+            text: `Capability Codes: R - Router, S - Switch, I - IGMP\nDevice ID     Local Intrfce  Holdtme  Capability  Platform  Port ID\n${rows || "(No CDP neighbors detected)"}\nTotal cdp entries displayed : ${peers.length}`,
+          });
+        } else {
+          sess.history.push({
+            type: "out",
+            text: `Global CDP information:\n  Sending CDP packets every ${timerVal} seconds\n  Sending a holdtime value of ${holdVal} seconds\n  Sending CDPv2 advertisements is enabled`,
+          });
+        }
+      } else if (lower.includes("lldp")) {
+        const lldpEnabled = sess.appliedConfigs.some((c) => /^lldp run$/i.test(c));
+        const timerMatch = [...sess.appliedConfigs].reverse().find((c) => /^lldp timer \d+/i.test(c));
+        const holdMatch = [...sess.appliedConfigs].reverse().find((c) => /^lldp holdtime \d+/i.test(c));
+        const timerVal = timerMatch ? timerMatch.split(/\s+/)[2] : "30";
+        const holdVal = holdMatch ? holdMatch.split(/\s+/)[2] : "120";
+        if (!lldpEnabled) {
+          sess.history.push({ type: "out", text: "% LLDP is not enabled" });
+        } else if (lower.includes("neighbors detail")) {
+          const peers = (ls.lab.nodes || []).filter((n) => n.label !== dev && (n.type === "router" || n.type === "switch"));
+          const detail = peers
+            .map((p, idx) => `------------------------------------------------\nLocal Intf: Gi0/${idx + 1}\nChassis id: 001e.bd${idx + 1}a.000${idx + 1}\nPort id: Gi0/${idx + 1}\nSystem Name: ${p.label}\nSystem Description: Cisco IOS Software (${p.type.toUpperCase()})\nTime remaining: ${holdVal} seconds\nSystem Capabilities: ${p.type === "router" ? "B,R" : "B"}`)
+            .join("\n");
+          sess.history.push({ type: "out", text: detail || "Total entries displayed: 0" });
+        } else if (lower.includes("neighbors")) {
+          const peers = (ls.lab.nodes || []).filter((n) => n.label !== dev && (n.type === "router" || n.type === "switch"));
+          const rows = peers
+            .map((p, idx) => `${p.label.padEnd(16, " ")}Gi0/${idx + 1}        ${holdVal.padEnd(11, " ")}${p.type === "router" ? "R  " : "B  "}          Gi0/${idx + 1}`)
+            .join("\n");
+          sess.history.push({
+            type: "out",
+            text: `Capability codes: (R) Router, (B) Bridge, (T) Telephone, (W) WLAN Access Point\nDevice ID       Local Intf   Hold-time  Capability  Port ID\n${rows || "(No LLDP neighbors detected)"}\nTotal entries displayed: ${peers.length}`,
+          });
+        } else {
+          sess.history.push({
+            type: "out",
+            text: `Global LLDP Information:\n  Status: ACTIVE\n  LLDP advertisements are sent every ${timerVal} seconds\n  LLDP hold time advertised is ${holdVal} seconds\n  LLDP interface reinitialization delay is 2 seconds`,
+          });
+        }
       } else {
         const solvedNow = isLabSolved(ls);
         const appliedCount = sess.appliedConfigs.length;

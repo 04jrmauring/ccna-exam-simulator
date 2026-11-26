@@ -1,7 +1,7 @@
-// CCNA 200-301 Hard Multi-Device Packet Tracer Lab Pool (20 Labs — 2 to 3 Configurable Devices per Lab)
-// Covers ALL 11 previous-passer topics (ACL, OSPF Election, VLAN, EtherChannel, Voice VLAN,
-// CDP/LLDP, IPv4 & IPv6 Addressing, NAT, NTP, DHCP Snooping, DAI) + 9 blueprint labs.
-// Each exam draws 6 unique labs from this 20-lab pool.
+// CCNA 200-301 Hard Multi-Device Packet Tracer Lab Pool (21 Labs — 2 to 3 Configurable Devices per Lab)
+// Covers ALL 11+ previous-passer topics (ACL, OSPF Election, VLAN, EtherChannel, Voice VLAN,
+// CDP & LLDP (2 multi-device labs), IPv4 & IPv6 Addressing, NAT, NTP, DHCP Snooping, DAI) + 9 blueprint labs.
+// Each exam draws 6 unique labs from this 21-lab pool.
 
 window.CCNA_LAB_POOL = [
   {
@@ -672,5 +672,49 @@ window.CCNA_LAB_POOL = [
       SW1: ["ip domain-name corp.local", "ip ssh version 2", "line vty 0 15", "transport input ssh"]
     },
     verifyOutput: "R1: SSHv2 + RESTCONF (443) + NETCONF-YANG (830) Ready\nSW1: SSHv2 + VTY SSH-Only Ready for Ansible Playbooks"
+  },
+  {
+    id: "LAB-21",
+    passerTag: "Passer Lab #12 • CDP & LLDP Timers (3 Devices)",
+    sectionCode: "2.0",
+    section: "2.0 Network Access",
+    title: "3-Device CDP & LLDP Neighbor Control & Timers",
+    devices: ["R1", "SW1", "SW2"],
+    scenario: "Configure Layer 2 neighbor discovery across 3 devices (R1, SW1, and SW2): On R1 (Edge Router), enable CDP globally with a 30-second advertise timer and 120-second holdtime, disable CDP on untrusted WAN interface Gi0/1, and enable LLDP globally. On SW1 (Core Switch), enable LLDP globally with a 30-second timer and 120-second holdtime, enable LLDP transmit and receive on Gi0/1 (toward R1) and Gi0/2 (toward SW2), and disable CDP on Gi0/2 facing the third-party segment. On SW2 (Access Switch), disable CDP globally, enable LLDP globally, enable LLDP transmit and receive on uplink Gi0/1, and disable LLDP transmit on untrusted access port Fa0/1.",
+    nodes: [
+      { id: "N1", type: "router", label: "R1", sub: "CDP/LLDP Edge", x: 55, y: 55, status: "blue", configurable: true, selected: true },
+      { id: "N2", type: "switch", label: "SW1", sub: "Core LLDP/CDP", x: 205, y: 55, status: "blue", configurable: true },
+      { id: "N3", type: "switch", label: "SW2", sub: "LLDP-Only SW", x: 355, y: 55, status: "blue", configurable: true },
+      { id: "N4", type: "pc", label: "UNTRUSTED-PC", sub: "Fa0/1 No TX", x: 355, y: 175, status: "red" }
+    ],
+    links: [
+      { x1: 125, y1: 83, x2: 225, y2: 83, label: "Gi0/1 CDP+LLDP", status: "green" },
+      { x1: 275, y1: 83, x2: 375, y2: 83, label: "Gi0/2 LLDP", status: "blue" },
+      { x1: 400, y1: 108, x2: 400, y2: 185, label: "Fa0/1 No LLDP TX", status: "red" }
+    ],
+    objectives: [
+      { id: "o1", device: "R1", text: "[R1] Enable CDP globally", pattern: /^cdp\s+run$/i },
+      { id: "o2", device: "R1", text: "[R1] Set CDP timer to 30 seconds", pattern: /^cdp\s+timer\s+30$/i },
+      { id: "o3", device: "R1", text: "[R1] Set CDP holdtime to 120 seconds", pattern: /^cdp\s+holdtime\s+120$/i },
+      { id: "o4", device: "R1", text: "[R1] Disable CDP on Gi0/1", pattern: /^no\s+cdp\s+enable$/i },
+      { id: "o5", device: "R1", text: "[R1] Enable LLDP globally", pattern: /^lldp\s+run$/i },
+      { id: "o6", device: "SW1", text: "[SW1] Enable LLDP globally", pattern: /^lldp\s+run$/i },
+      { id: "o7", device: "SW1", text: "[SW1] Set LLDP timer to 30 seconds", pattern: /^lldp\s+timer\s+30$/i },
+      { id: "o8", device: "SW1", text: "[SW1] Set LLDP holdtime to 120 seconds", pattern: /^lldp\s+holdtime\s+120$/i },
+      { id: "o9", device: "SW1", text: "[SW1] Enable LLDP transmit on Gi0/1-2", pattern: /^lldp\s+transmit$/i },
+      { id: "o10", device: "SW1", text: "[SW1] Enable LLDP receive on Gi0/1-2", pattern: /^lldp\s+receive$/i },
+      { id: "o11", device: "SW1", text: "[SW1] Disable CDP on Gi0/2", pattern: /^no\s+cdp\s+enable$/i },
+      { id: "o12", device: "SW2", text: "[SW2] Disable CDP globally", pattern: /^no\s+cdp\s+run$/i },
+      { id: "o13", device: "SW2", text: "[SW2] Enable LLDP globally", pattern: /^lldp\s+run$/i },
+      { id: "o14", device: "SW2", text: "[SW2] Enable LLDP transmit on Gi0/1", pattern: /^lldp\s+transmit$/i },
+      { id: "o15", device: "SW2", text: "[SW2] Enable LLDP receive on Gi0/1", pattern: /^lldp\s+receive$/i },
+      { id: "o16", device: "SW2", text: "[SW2] Disable LLDP transmit on Fa0/1", pattern: /^no\s+lldp\s+transmit$/i }
+    ],
+    solutions: {
+      R1: ["cdp run", "cdp timer 30", "cdp holdtime 120", "lldp run", "interface gigabitethernet 0/1", "no cdp enable"],
+      SW1: ["lldp run", "lldp timer 30", "lldp holdtime 120", "interface range gigabitethernet 0/1 - 2", "lldp transmit", "lldp receive", "interface gigabitethernet 0/2", "no cdp enable"],
+      SW2: ["no cdp run", "lldp run", "interface gigabitethernet 0/1", "lldp transmit", "lldp receive", "interface fastethernet 0/1", "no lldp transmit"]
+    },
+    verifyOutput: "R1: CDP Active (timer 30s, hold 120s, Gi0/1 disabled) + LLDP Active\nSW1: LLDP Active (timer 30s, hold 120s, Gi0/1-2 TX/RX) + CDP disabled on Gi0/2\nSW2: CDP Globally Disabled | LLDP Active on Gi0/1 | Fa0/1 LLDP TX Disabled"
   }
 ];

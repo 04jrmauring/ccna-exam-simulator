@@ -135,7 +135,29 @@
       },
       banner: { desc: "Define a login banner", sub: { motd: { desc: "Set Message of the Day banner", sub: { "<text>": { desc: "Delimited banner message", cr: true } } } } },
       cdp: { desc: "Global CDP configuration subcommands", sub: { run: { desc: "Enable CDP globally", cr: true }, timer: { desc: "Specify rate at which CDP packets are sent", sub: { "<5-254>": { desc: "Seconds", cr: true } } }, holdtime: { desc: "Specify holdtime sent in CDP packets", sub: { "<10-255>": { desc: "Seconds", cr: true } } } } },
-      crypto: { desc: "Encryption module", sub: { key: { desc: "Long term key operations", sub: { generate: { desc: "Generate new keys", sub: { rsa: { desc: "Generate RSA keys", cr: true } } } } } } },
+      crypto: {
+        desc: "Encryption module",
+        sub: {
+          key: {
+            desc: "Long term key operations",
+            sub: {
+              generate: {
+                desc: "Generate new keys",
+                sub: {
+                  rsa: {
+                    desc: "Generate RSA keys",
+                    sub: {
+                      modulus: { desc: "Provide number of modulus bits", sub: { "<512-4096>": { desc: "RSA key modulus size (e.g. 1024 or 2048)", cr: true } } },
+                      "general-keys": { desc: "Generate a general purpose RSA key pair", sub: { modulus: { desc: "Provide number of modulus bits", sub: { "<512-4096>": { desc: "RSA key modulus size (e.g. 2048)", cr: true } } } }, cr: true },
+                    },
+                    cr: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       do: { desc: "To run exec commands in config mode", sub: DO_SUB },
       enable: { desc: "Modify enable password parameters", sub: { secret: { desc: "Assign the secret password", sub: { "<password>": { desc: "Cleartext secret", cr: true } } } } },
       end: { desc: "Exit from configure mode to Privileged EXEC", cr: true },
@@ -507,6 +529,13 @@
       },
       "default-information": { desc: "Control distribution of default information", sub: { originate: { desc: "Distribute a default route", sub: { always: { desc: "Always advertise default route", cr: true } }, cr: true } } },
       "auto-cost": { desc: "Calculate OSPF interface cost according to bandwidth", sub: { "reference-bandwidth": { desc: "Use reference bandwidth method", sub: { "<1-4294967>": { desc: "Reference bandwidth in Mbps", cr: true } } } } },
+      no: {
+        desc: "Negate a routing process command",
+        sub: {
+          "passive-interface": { desc: "Re-enable OSPF Hellos on an interface", sub: { default: { desc: "Allow Hellos on all interfaces", cr: true }, ...IFACE_TYPE_SUB } },
+          network: { desc: "Remove an OSPF network statement", cr: true },
+        },
+      },
       do: { desc: "To run exec commands in config mode", sub: DO_SUB },
       exit: { desc: "Exit from routing protocol configuration mode", cr: true },
       end: { desc: "Exit from configure mode", cr: true },

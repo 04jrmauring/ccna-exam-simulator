@@ -1,7 +1,9 @@
-// CCNA 200-301 Hard Multi-Device Packet Tracer Lab Pool (21 Labs — 2 to 3 Configurable Devices per Lab)
-// Covers ALL 11+ previous-passer topics (ACL, OSPF Election, VLAN, EtherChannel, Voice VLAN,
-// CDP & LLDP (2 multi-device labs), IPv4 & IPv6 Addressing, NAT, NTP, DHCP Snooping, DAI) + 9 blueprint labs.
-// Each exam draws 6 unique labs from this 21-lab pool.
+// CCNA 200-301 Hard Multi-Device Packet Tracer Lab Pool (25 Labs — 2 to 3 Configurable Devices per Lab)
+// Covers ALL core CCNA 200-301 exam lab topics:
+// 1. Switching & VLANs (VLAN creation/naming, 802.1Q Trunk/Native VLAN, LACP & PAgP EtherChannel, STP Root/PortFast/BPDU Guard, CDP & LLDP)
+// 2. Routing & IP Connectivity (ROAS & L3 SVI Inter-VLAN, IPv4 & IPv6 Default/Host/Floating Static Routes, Single-Area OSPFv2 Election/Default/Troubleshooting, HSRPv2)
+// 3. IP Services & Security (NAT/PAT Overload, Static NAT, DHCPv4 Server & Relay, Standard & Extended ACLs, Port Security protect/restrict/shutdown, Full SSHv2 Hardening, NTP, DHCP Snooping, DAI, RESTCONF/NETCONF)
+// Each exam draws 6 unique labs from this 25-lab pool.
 
 window.CCNA_LAB_POOL = [
   {
@@ -415,36 +417,40 @@ window.CCNA_LAB_POOL = [
   },
   {
     id: "LAB-13",
-    passerTag: "Blueprint Lab • Port Security (2 Devices)",
+    passerTag: "Blueprint Lab • Port Security All Modes (3 Devices)",
     sectionCode: "5.0",
     section: "5.0 Security Fundamentals",
-    title: "Dual-Switch Port Security & Sticky MAC Hardening",
-    devices: ["SW1", "SW2"],
-    scenario: "Harden user ports across SW1 and SW2: On SW1 Fa0/3, set static access, enable port-security, max 2 MACs, sticky learning, violation restrict. On SW2 Fa0/4, set static access, enable port-security, max 1 MAC, sticky learning, violation shutdown.",
+    title: "3-Switch Port Security (Restrict, Shutdown & Protect)",
+    devices: ["SW1", "SW2", "SW3"],
+    scenario: "Harden access ports across 3 switches with all three Port Security violation modes: On SW1 Fa0/3, set static access, enable port-security, allow maximum 2 MAC addresses with sticky learning, and set violation mode restrict. On SW2 Fa0/4, set static access, enable port-security, allow maximum 1 MAC with sticky learning, and set violation mode shutdown. On SW3 Fa0/5, set static access, enable port-security, allow maximum 2 MACs with sticky learning, and set violation mode protect.",
     nodes: [
-      { id: "N1", type: "switch", label: "SW1", sub: "Restrict Mode", x: 115, y: 58, status: "blue", configurable: true, selected: true },
-      { id: "N2", type: "switch", label: "SW2", sub: "Shutdown Mode", x: 330, y: 58, status: "blue", configurable: true },
-      { id: "N3", type: "pc", label: "PC+PHONE", sub: "Max 2 Sticky", x: 75, y: 175, status: "green" },
-      { id: "N4", type: "pc", label: "ROGUE-PC", sub: "Max 1 Shut", x: 355, y: 175, status: "red" }
+      { id: "N1", type: "switch", label: "SW1", sub: "Restrict Mode", x: 55, y: 55, status: "blue", configurable: true, selected: true },
+      { id: "N2", type: "switch", label: "SW2", sub: "Shutdown Mode", x: 205, y: 55, status: "blue", configurable: true },
+      { id: "N3", type: "switch", label: "SW3", sub: "Protect Mode", x: 355, y: 55, status: "blue", configurable: true },
+      { id: "N4", type: "pc", label: "ROGUE-PC", sub: "MAC Flood Test", x: 205, y: 175, status: "red" }
     ],
     links: [
-      { x1: 185, y1: 86, x2: 345, y2: 86, label: "Trunk Gi0/1", status: "blue" },
-      { x1: 145, y1: 110, x2: 110, y2: 185, label: "SW1 Fa0/3", status: "green" },
-      { x1: 375, y1: 110, x2: 390, y2: 185, label: "SW2 Fa0/4", status: "red" }
+      { x1: 125, y1: 83, x2: 225, y2: 83, label: "Trunk Gi0/1", status: "blue" },
+      { x1: 275, y1: 83, x2: 375, y2: 83, label: "Trunk Gi0/2", status: "blue" },
+      { x1: 250, y1: 108, x2: 250, y2: 185, label: "Access Ports", status: "red" }
     ],
     objectives: [
-      { id: "o1", device: "SW1", text: "[SW1] On Fa0/3 set access mode & enable 'switchport port-security'", pattern: /^switchport\s+port-security$/i },
-      { id: "o2", device: "SW1", text: "[SW1] Set max 2 MACs and sticky learning on Fa0/3", pattern: /switchport\s+port-security\s+maximum\s+2/i },
+      { id: "o1", device: "SW1", text: "[SW1] Enable port-security on Fa0/3", pattern: /^switchport\s+port-security$/i },
+      { id: "o2", device: "SW1", text: "[SW1] Set max 2 MACs on Fa0/3", pattern: /switchport\s+port-security\s+maximum\s+2/i },
       { id: "o3", device: "SW1", text: "[SW1] Set violation restrict on Fa0/3", pattern: /switchport\s+port-security\s+violation\s+restrict/i },
-      { id: "o4", device: "SW2", text: "[SW2] On Fa0/4 set access mode & enable 'switchport port-security'", pattern: /^switchport\s+port-security$/i },
+      { id: "o4", device: "SW2", text: "[SW2] Enable port-security on Fa0/4", pattern: /^switchport\s+port-security$/i },
       { id: "o5", device: "SW2", text: "[SW2] Enable sticky MAC learning on Fa0/4", pattern: /switchport\s+port-security\s+mac-address\s+sticky/i },
-      { id: "o6", device: "SW2", text: "[SW2] Set violation shutdown on Fa0/4", pattern: /switchport\s+port-security\s+violation\s+shutdown/i }
+      { id: "o6", device: "SW2", text: "[SW2] Set violation shutdown on Fa0/4", pattern: /switchport\s+port-security\s+violation\s+shutdown/i },
+      { id: "o7", device: "SW3", text: "[SW3] Enable port-security on Fa0/5", pattern: /^switchport\s+port-security$/i },
+      { id: "o8", device: "SW3", text: "[SW3] Set max 2 MACs on Fa0/5", pattern: /switchport\s+port-security\s+maximum\s+2/i },
+      { id: "o9", device: "SW3", text: "[SW3] Set violation protect on Fa0/5", pattern: /switchport\s+port-security\s+violation\s+protect/i }
     ],
     solutions: {
       SW1: ["interface fastethernet 0/3", "switchport mode access", "switchport port-security", "switchport port-security maximum 2", "switchport port-security mac-address sticky", "switchport port-security violation restrict"],
-      SW2: ["interface fastethernet 0/4", "switchport mode access", "switchport port-security", "switchport port-security maximum 1", "switchport port-security mac-address sticky", "switchport port-security violation shutdown"]
+      SW2: ["interface fastethernet 0/4", "switchport mode access", "switchport port-security", "switchport port-security maximum 1", "switchport port-security mac-address sticky", "switchport port-security violation shutdown"],
+      SW3: ["interface fastethernet 0/5", "switchport mode access", "switchport port-security", "switchport port-security maximum 2", "switchport port-security mac-address sticky", "switchport port-security violation protect"]
     },
-    verifyOutput: "SW1 Fa0/3: Secure-up (Max 2, Sticky, Restrict)\nSW2 Fa0/4: Secure-up (Max 1, Sticky, Shutdown)"
+    verifyOutput: "SW1 Fa0/3: Secure-up (Max 2, Sticky, Restrict)\nSW2 Fa0/4: Secure-up (Max 1, Sticky, Shutdown)\nSW3 Fa0/5: Secure-up (Max 2, Sticky, Protect)"
   },
   {
     id: "LAB-14",
@@ -716,5 +722,152 @@ window.CCNA_LAB_POOL = [
       SW2: ["no cdp run", "lldp run", "interface gigabitethernet 0/1", "lldp transmit", "lldp receive", "interface fastethernet 0/1", "no lldp transmit"]
     },
     verifyOutput: "R1: CDP Active (timer 30s, hold 120s, Gi0/1 disabled) + LLDP Active\nSW1: LLDP Active (timer 30s, hold 120s, Gi0/1-2 TX/RX) + CDP disabled on Gi0/2\nSW2: CDP Globally Disabled | LLDP Active on Gi0/1 | Fa0/1 LLDP TX Disabled"
+  },
+  {
+    id: "LAB-22",
+    passerTag: "Blueprint Lab • PAgP EtherChannel (2 Devices)",
+    sectionCode: "2.0",
+    section: "2.0 Network Access",
+    title: "Dual-Switch Cisco PAgP EtherChannel & Native 99 Trunk",
+    devices: ["SW1", "SW2"],
+    scenario: "Configure a Cisco proprietary PAgP EtherChannel between SW1 and SW2: On SW1, bundle Gi0/1–2 into Port-Channel 2 using PAgP desirable mode, configure Port-Channel 2 as an 802.1Q trunk with Native VLAN 99, and allow VLANs 10,20,30. On SW2, bundle Gi0/1–2 into Port-Channel 2 using PAgP auto mode, configure Port-Channel 2 as a trunk with Native VLAN 99, and allow VLANs 10,20,30.",
+    nodes: [
+      { id: "N1", type: "switch", label: "SW1", sub: "PAgP Desirable", x: 115, y: 58, status: "blue", configurable: true, selected: true },
+      { id: "N2", type: "switch", label: "SW2", sub: "PAgP Auto", x: 330, y: 58, status: "blue", configurable: true },
+      { id: "N3", type: "pc", label: "USER-V10", sub: "VLAN 10", x: 75, y: 175, status: "green" },
+      { id: "N4", type: "server", label: "APP-V30", sub: "VLAN 30", x: 355, y: 175, status: "green" }
+    ],
+    links: [
+      { x1: 185, y1: 86, x2: 345, y2: 86, label: "Po2 PAgP (Gi0/1-2)", status: "blue" },
+      { x1: 145, y1: 110, x2: 110, y2: 185, label: "Fa0/1", status: "green" },
+      { x1: 375, y1: 110, x2: 390, y2: 185, label: "Fa0/2", status: "green" }
+    ],
+    objectives: [
+      { id: "o1", device: "SW1", text: "[SW1] Bundle Gi0/1-2 in channel-group 2 mode desirable", pattern: /channel-group\s+2\s+mode\s+desirable/i },
+      { id: "o2", device: "SW1", text: "[SW1] Configure Po2 trunk with Native VLAN 99", pattern: /switchport\s+trunk\s+native\s+vlan\s+99/i },
+      { id: "o3", device: "SW1", text: "[SW1] Allow VLANs 10,20,30 on Po2", pattern: /switchport\s+trunk\s+allowed\s+vlan\s+10,20,30/i },
+      { id: "o4", device: "SW2", text: "[SW2] Bundle Gi0/1-2 in channel-group 2 mode auto", pattern: /channel-group\s+2\s+mode\s+auto/i },
+      { id: "o5", device: "SW2", text: "[SW2] Configure Po2 trunk with Native VLAN 99", pattern: /switchport\s+trunk\s+native\s+vlan\s+99/i },
+      { id: "o6", device: "SW2", text: "[SW2] Allow VLANs 10,20,30 on Po2", pattern: /switchport\s+trunk\s+allowed\s+vlan\s+10,20,30/i }
+    ],
+    solutions: {
+      SW1: ["interface range gigabitethernet 0/1 - 2", "channel-group 2 mode desirable", "interface port-channel 2", "switchport mode trunk", "switchport trunk native vlan 99", "switchport trunk allowed vlan 10,20,30"],
+      SW2: ["interface range gigabitethernet 0/1 - 2", "channel-group 2 mode auto", "interface port-channel 2", "switchport mode trunk", "switchport trunk native vlan 99", "switchport trunk allowed vlan 10,20,30"]
+    },
+    verifyOutput: "SW1 Po2(SU) PAgP Gi0/1(P) Gi0/2(P) <-> SW2 Po2(SU) PAgP Gi0/1(P) Gi0/2(P)\nNative VLAN 99 & Allowed VLANs 10,20,30 Matched"
+  },
+  {
+    id: "LAB-23",
+    passerTag: "Blueprint Lab • IPv4 & IPv6 Host Routes (2 Devices)",
+    sectionCode: "3.0",
+    section: "3.0 IP Connectivity",
+    title: "IPv4 /32 & IPv6 /128 Host Routes + IPv6 Floating Backup",
+    devices: ["R1", "R2"],
+    scenario: "Configure granular host routing and dual-stack failover across R1 and R2: Enable IPv6 unicast routing on both routers. On R1, add an IPv4 /32 host route to monitoring server 172.16.99.10 via 10.1.1.2, an IPv6 /128 host route to 2001:db8:99::10/128 via 2001:db8:12::2, and a floating IPv6 default backup route via 2001:db8:13::2 with Administrative Distance 5. On R2, add an IPv4 /32 return host route to admin PC 192.168.10.50 via 10.1.1.1 and an IPv6 /128 return host route to 2001:db8:10::50/128 via 2001:db8:12::1.",
+    nodes: [
+      { id: "N1", type: "pc", label: "ADMIN-PC", sub: ".10.50 / ::50", x: 35, y: 170, status: "green" },
+      { id: "N2", type: "router", label: "R1", sub: "Branch Edge", x: 145, y: 55, status: "blue", configurable: true, selected: true },
+      { id: "N3", type: "router", label: "R2", sub: "DC Core", x: 315, y: 55, status: "blue", configurable: true },
+      { id: "N4", type: "server", label: "MON-SRV", sub: ".99.10 / ::10", x: 375, y: 170, status: "green" }
+    ],
+    links: [
+      { x1: 175, y1: 108, x2: 95, y2: 185, label: "LAN", status: "green" },
+      { x1: 215, y1: 84, x2: 335, y2: 84, label: "Dual-Stack WAN", status: "blue" },
+      { x1: 360, y1: 108, x2: 400, y2: 185, label: "Server VLAN", status: "green" }
+    ],
+    objectives: [
+      { id: "o1", device: "R1", text: "[R1] Enable IPv6 unicast routing", pattern: /ipv6\s+unicast-routing/i },
+      { id: "o2", device: "R1", text: "[R1] IPv4 /32 host route to 172.16.99.10 via 10.1.1.2", pattern: /ip\s+route\s+172\.16\.99\.10\s+255\.255\.255\.255\s+10\.1\.1\.2/i },
+      { id: "o3", device: "R1", text: "[R1] IPv6 /128 host route to 2001:db8:99::10/128 via 2001:db8:12::2", pattern: /ipv6\s+route\s+2001:db8:99::10\/128\s+2001:db8:12::2/i },
+      { id: "o4", device: "R1", text: "[R1] IPv6 floating default route via 2001:db8:13::2 AD 5", pattern: /ipv6\s+route\s+::\/0\s+2001:db8:13::2\s+5/i },
+      { id: "o5", device: "R2", text: "[R2] Enable IPv6 unicast routing", pattern: /ipv6\s+unicast-routing/i },
+      { id: "o6", device: "R2", text: "[R2] IPv4 /32 return host route to 192.168.10.50 via 10.1.1.1", pattern: /ip\s+route\s+192\.168\.10\.50\s+255\.255\.255\.255\s+10\.1\.1\.1/i },
+      { id: "o7", device: "R2", text: "[R2] IPv6 /128 return host route to 2001:db8:10::50/128 via 2001:db8:12::1", pattern: /ipv6\s+route\s+2001:db8:10::50\/128\s+2001:db8:12::1/i }
+    ],
+    solutions: {
+      R1: ["ipv6 unicast-routing", "ip route 172.16.99.10 255.255.255.255 10.1.1.2", "ipv6 route 2001:db8:99::10/128 2001:db8:12::2", "ipv6 route ::/0 2001:db8:13::2 5"],
+      R2: ["ipv6 unicast-routing", "ip route 192.168.10.50 255.255.255.255 10.1.1.1", "ipv6 route 2001:db8:10::50/128 2001:db8:12::1"]
+    },
+    verifyOutput: "R1 & R2 Host Routes Active: /32 IPv4 + /128 IPv6 Symmetric Reachability Verified\nR1 IPv6 Floating Backup (AD 5) Ready"
+  },
+  {
+    id: "LAB-24",
+    passerTag: "Blueprint Lab • OSPFv2 Troubleshooting (3 Devices)",
+    sectionCode: "3.0",
+    section: "3.0 IP Connectivity",
+    title: "3-Router OSPFv2 Adjacency Troubleshooting & Tuning",
+    devices: ["R1", "R2", "R3"],
+    scenario: "Fix broken Single-Area OSPFv2 (Process 1, Area 0) adjacencies across 3 routers: On R1, remove the accidental passive-interface on WAN link Gi0/0, set OSPF network type point-to-point on Gi0/0, and set OSPF reference bandwidth to 10000 Mbps. On R2, set OSPF network type point-to-point on Gi0/0 and Gi0/1, set reference bandwidth to 10000 Mbps, and advertise 10.1.0.0/16 in Area 0. On R3, enable OSPF Process 1 Area 0 on Gi0/0, set Gi0/0 to point-to-point, suppress Hellos on LAN Gi0/1, and set reference bandwidth to 10000 Mbps.",
+    nodes: [
+      { id: "N1", type: "router", label: "R1", sub: "Passive Bug", x: 55, y: 58, status: "red", configurable: true, selected: true },
+      { id: "N2", type: "router", label: "R2", sub: "Core P2P", x: 205, y: 58, status: "orange", configurable: true },
+      { id: "N3", type: "router", label: "R3", sub: "Branch P2P", x: 355, y: 58, status: "orange", configurable: true },
+      { id: "N4", type: "pc", label: "USER-LAN", sub: "R3 Gi0/1", x: 355, y: 175, status: "green" }
+    ],
+    links: [
+      { x1: 125, y1: 86, x2: 225, y2: 86, label: "P2P Area 0", status: "red" },
+      { x1: 275, y1: 86, x2: 375, y2: 86, label: "P2P Area 0", status: "orange" },
+      { x1: 400, y1: 110, x2: 400, y2: 185, label: "Passive LAN", status: "green" }
+    ],
+    objectives: [
+      { id: "o1", device: "R1", text: "[R1] Remove passive-interface on Gi0/0", pattern: /no\s+passive-interface\s+g(igabitethernet)?\s*0\/0/i },
+      { id: "o2", device: "R1", text: "[R1] Set OSPF reference bandwidth 10000", pattern: /auto-cost\s+reference-bandwidth\s+10000/i },
+      { id: "o3", device: "R1", text: "[R1] Set Gi0/0 OSPF network point-to-point", pattern: /ip\s+ospf\s+network\s+point-to-point/i },
+      { id: "o4", device: "R2", text: "[R2] Set OSPF reference bandwidth 10000", pattern: /auto-cost\s+reference-bandwidth\s+10000/i },
+      { id: "o5", device: "R2", text: "[R2] Advertise 10.1.0.0/16 in Area 0", pattern: /network\s+10\.1\.0\.0\s+0\.0\.255\.255\s+area\s+0/i },
+      { id: "o6", device: "R2", text: "[R2] Set WAN interfaces to OSPF point-to-point", pattern: /ip\s+ospf\s+network\s+point-to-point/i },
+      { id: "o7", device: "R3", text: "[R3] Set OSPF reference bandwidth 10000", pattern: /auto-cost\s+reference-bandwidth\s+10000/i },
+      { id: "o8", device: "R3", text: "[R3] Suppress OSPF Hellos on Gi0/1", pattern: /passive-interface\s+g(igabitethernet)?\s*0\/1/i },
+      { id: "o9", device: "R3", text: "[R3] Enable OSPF Area 0 and point-to-point on Gi0/0", pattern: /ip\s+ospf\s+network\s+point-to-point/i }
+    ],
+    solutions: {
+      R1: ["router ospf 1", "no passive-interface gigabitethernet 0/0", "auto-cost reference-bandwidth 10000", "interface gigabitethernet 0/0", "ip ospf network point-to-point"],
+      R2: ["router ospf 1", "auto-cost reference-bandwidth 10000", "network 10.1.0.0 0.0.255.255 area 0", "interface range gigabitethernet 0/0 - 1", "ip ospf network point-to-point"],
+      R3: ["router ospf 1", "auto-cost reference-bandwidth 10000", "passive-interface gigabitethernet 0/1", "interface gigabitethernet 0/0", "ip ospf 1 area 0", "ip ospf network point-to-point"]
+    },
+    verifyOutput: "R1 <-> R2 <-> R3: FULL/- Point-to-Point Adjacencies Restored\nReference Bandwidth Matched (10000 Mbps) across all 3 routers"
+  },
+  {
+    id: "LAB-25",
+    passerTag: "Passer Lab #13 • Device Hardening SSH (2 Devices)",
+    sectionCode: "5.0",
+    section: "5.0 Security Fundamentals",
+    title: "Multi-Device Full SSHv2 Hardening & Local Auth",
+    devices: ["R1", "SW1"],
+    scenario: "Harden remote management on BOTH R1 and SW1 from scratch: On R1, set hostname R1-EDGE, configure enable secret CiscoEn123, encrypt clear-text passwords globally, set domain name corp.local, create local user admin with secret CiscoAdm123, generate RSA crypto keys (2048-bit modulus), enforce SSH version 2, and configure VTY lines 0 through 15 to require local authentication and SSH-only inbound transport. On SW1, set hostname SW1-ACC, set domain name corp.local, create local user admin with secret CiscoAdm123, generate RSA crypto keys (2048-bit modulus), enforce SSH version 2, and configure VTY lines 0 through 15 with local login and SSH-only transport.",
+    nodes: [
+      { id: "N1", type: "router", label: "R1", sub: "R1-EDGE SSHv2", x: 115, y: 58, status: "blue", configurable: true, selected: true },
+      { id: "N2", type: "switch", label: "SW1", sub: "SW1-ACC SSHv2", x: 330, y: 58, status: "blue", configurable: true },
+      { id: "N3", type: "pc", label: "NET-ADMIN", sub: "SSH Client 22", x: 115, y: 175, status: "green" },
+      { id: "N4", type: "pc", label: "TELNET-DENY", sub: "TCP 23 Blocked", x: 330, y: 175, status: "red" }
+    ],
+    links: [
+      { x1: 185, y1: 86, x2: 345, y2: 86, label: "Mgmt Link", status: "blue" },
+      { x1: 150, y1: 110, x2: 150, y2: 185, label: "SSHv2 TCP 22", status: "green" },
+      { x1: 365, y1: 110, x2: 365, y2: 185, label: "Telnet Denied", status: "red" }
+    ],
+    objectives: [
+      { id: "o1", device: "R1", text: "[R1] Set hostname R1-EDGE", pattern: /^hostname\s+R1-EDGE$/i },
+      { id: "o2", device: "R1", text: "[R1] Set enable secret and password encryption", pattern: /^enable\s+secret\s+\S+/i },
+      { id: "o3", device: "R1", text: "[R1] Encrypt clear-text passwords globally", pattern: /^service\s+password-encryption$/i },
+      { id: "o4", device: "R1", text: "[R1] Configure domain corp.local", pattern: /^ip\s+domain-name\s+corp\.local$/i },
+      { id: "o5", device: "R1", text: "[R1] Create local user admin with secret", pattern: /^username\s+admin\s+secret\s+\S+/i },
+      { id: "o6", device: "R1", text: "[R1] Generate RSA keys", pattern: /^crypto\s+key\s+generate\s+rsa/i },
+      { id: "o7", device: "R1", text: "[R1] Enforce SSH version 2", pattern: /^ip\s+ssh\s+version\s+2$/i },
+      { id: "o8", device: "R1", text: "[R1] Enable login local on VTY", pattern: /^login\s+local$/i },
+      { id: "o9", device: "R1", text: "[R1] Restrict VTY to SSH only", pattern: /^transport\s+input\s+ssh$/i },
+      { id: "o10", device: "SW1", text: "[SW1] Set hostname SW1-ACC", pattern: /^hostname\s+SW1-ACC$/i },
+      { id: "o11", device: "SW1", text: "[SW1] Configure domain corp.local", pattern: /^ip\s+domain-name\s+corp\.local$/i },
+      { id: "o12", device: "SW1", text: "[SW1] Create local user admin with secret", pattern: /^username\s+admin\s+secret\s+\S+/i },
+      { id: "o13", device: "SW1", text: "[SW1] Generate RSA keys", pattern: /^crypto\s+key\s+generate\s+rsa/i },
+      { id: "o14", device: "SW1", text: "[SW1] Enforce SSH version 2", pattern: /^ip\s+ssh\s+version\s+2$/i },
+      { id: "o15", device: "SW1", text: "[SW1] Enable login local on VTY", pattern: /^login\s+local$/i },
+      { id: "o16", device: "SW1", text: "[SW1] Restrict VTY to SSH only", pattern: /^transport\s+input\s+ssh$/i }
+    ],
+    solutions: {
+      R1: ["hostname R1-EDGE", "enable secret CiscoEn123", "service password-encryption", "ip domain-name corp.local", "username admin secret CiscoAdm123", "crypto key generate rsa modulus 2048", "ip ssh version 2", "line vty 0 15", "login local", "transport input ssh"],
+      SW1: ["hostname SW1-ACC", "ip domain-name corp.local", "username admin secret CiscoAdm123", "crypto key generate rsa modulus 2048", "ip ssh version 2", "line vty 0 15", "login local", "transport input ssh"]
+    },
+    verifyOutput: "R1-EDGE & SW1-ACC: SSHv2 Active (2048-bit RSA) | Local Auth Enforced | Telnet Blocked"
   }
 ];

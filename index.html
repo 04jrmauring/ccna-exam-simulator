@@ -55,7 +55,7 @@
             <path d="M6 8.5 8 10l-2 1.5M10 11.5h3.5M7 17h6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           <span>Virtual Labs</span>
-          <span class="nav-count">21 Pool</span>
+          <span class="nav-count">25 Pool</span>
         </button>
 
         <button class="nav-item" data-view="analytics">
@@ -86,7 +86,7 @@
         <div class="readiness-card">
           <div class="readiness-header">
             <span>Exam Pool</span>
-            <strong class="text-cisco">1,000 Q / 21 Labs</strong>
+            <strong class="text-cisco">1,000 Q / 25 Labs</strong>
           </div>
           <div class="mini-bar">
             <div class="mini-bar-fill" id="sidebarProgressFill" style="width: 2%"></div>
@@ -450,7 +450,7 @@
         <div class="page-header-row">
           <div>
             <h1 class="page-h1">CCNA 200-301 Exam Simulator Dashboard</h1>
-            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 21-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,000-question pool).</p>
+            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 25-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,000-question pool).</p>
           </div>
           <button class="btn btn-primary" id="dashStartExamBtn">Start Fresh Exam (6 Labs → 100 Qs)</button>
         </div>
@@ -463,7 +463,7 @@
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Packet Tracer Lab Pool</span>
-            <strong class="kpi-val text-green">21 Labs</strong>
+            <strong class="kpi-val text-green">25 Labs</strong>
             <span class="kpi-sub">6 labs presented first (with Skip/Next)</span>
           </div>
           <div class="kpi-card">
@@ -497,13 +497,13 @@
       <section class="page-view view-section hidden" id="view-virtual-labs">
         <div class="page-header-row">
           <div>
-            <h1 class="page-h1">Packet Tracer Virtual Labs Pool (21 Labs)</h1>
-            <p class="page-sub">Includes all previous-passer topics (ACL, OSPF Election, VLAN, EtherChannel, Voice VLAN, 2x CDP &amp; LLDP labs, IPv4/IPv6, NAT, NTP, DHCP Snooping, DAI) + 9 blueprint labs.</p>
+            <h1 class="page-h1">Packet Tracer Virtual Labs Pool (25 Labs)</h1>
+            <p class="page-sub">Complete CCNA 200-301 multi-device lab coverage: VLANs, 802.1Q Trunks, LACP &amp; PAgP EtherChannel, STP Root/PortFast/BPDU Guard, CDP &amp; LLDP, ROAS &amp; L3 SVIs, IPv4/IPv6 Default/Host/Floating Static Routes, OSPFv2 Election &amp; Troubleshooting, HSRPv2, NAT/PAT, DHCP Server/Relay, Standard &amp; Extended ACLs, Port Security (Protect/Restrict/Shutdown), Full SSHv2 Hardening, NTP, DHCP Snooping, DAI, and RESTCONF/NETCONF.</p>
           </div>
           <div class="drawer-filters" id="labCatalogFilters">
-            <button class="filter-chip active" data-labfilter="all">All (21)</button>
-            <button class="filter-chip" data-labfilter="passer">Passer Topics (12)</button>
-            <button class="filter-chip" data-labfilter="blueprint">Blueprint Labs (9)</button>
+            <button class="filter-chip active" data-labfilter="all">All (25)</button>
+            <button class="filter-chip" data-labfilter="passer">Passer Topics (13)</button>
+            <button class="filter-chip" data-labfilter="blueprint">Blueprint Labs (12)</button>
           </div>
         </div>
         <div class="lab-catalog-grid" id="labCatalogGrid"></div>
@@ -577,22 +577,93 @@
           </div>
 
           <div class="panel card-pad">
-            <h2 class="card-h2">Passer Lab Essential Commands</h2>
-            <pre class="ref-code">! DHCP Snooping &amp; DAI
-ip dhcp snooping
-ip dhcp snooping vlan 10
-int gi0/1 -&gt; ip dhcp snooping trust
-ip arp inspection vlan 10
-int gi0/1 -&gt; ip arp inspection trust
+            <h2 class="card-h2">1. Switching, VLANs, STP &amp; CDP/LLDP Cheat Sheet</h2>
+            <pre class="ref-code">! VLAN Creation &amp; Access Port
+vlan 10 -&gt; name SALES
+int fa0/1 -&gt; sw mo ac -&gt; sw ac vl 10
+int fa0/5 -&gt; sw vo vl 20
 
-! LACP EtherChannel &amp; Voice VLAN
-int range gi0/1 - 2 -&gt; channel-group 1 mode active
-int fa0/5 -&gt; switchport access vlan 10
-             switchport voice vlan 20
+! 802.1Q Trunk &amp; Native VLAN
+int gi0/1 -&gt; sw mo tr
+  sw tr na vl 99
+  sw tr al vl 10,20
 
-! PAT Overload &amp; OSPF DR Priority
+! EtherChannel (LACP &amp; PAgP)
+int range gi0/1 - 2 -&gt; ch 1 mo active (or passive)
+int range gi0/1 - 2 -&gt; ch 2 mo desirable (or auto)
+int po1 -&gt; sw mo tr
+
+! STP Root, PortFast &amp; BPDU Guard
+spanning-tree mode rapid-pvst
+spanning-tree vlan 10 root primary (or secondary)
+int fa0/1 -&gt; spanning-tree portfast
+             spanning-tree bpduguard enable
+
+! CDP &amp; LLDP Control
+cdp run | no cdp run | cdp timer 30 | cdp holdtime 120
+lldp run | lldp timer 30 | lldp holdtime 120
+int gi0/1 -&gt; no cdp enable | lldp transmit | lldp receive</pre>
+          </div>
+
+          <div class="panel card-pad">
+            <h2 class="card-h2">2. Routing &amp; IP Connectivity Cheat Sheet</h2>
+            <pre class="ref-code">! Inter-VLAN: Router-on-a-Stick (ROAS)
+int gi0/0 -&gt; no sh
+int gi0/0.10 -&gt; enc dot1q 10
+  ip add 192.168.10.1 255.255.255.0
+
+! Inter-VLAN: Layer 3 Switch (SVI)
+ip routing
+int vlan 10 -&gt; ip add 192.168.10.1 255.255.255.0 -&gt; no sh
+int gi0/1 -&gt; no switchport -&gt; ip add 10.0.0.2 255.255.255.252
+
+! Static, Host (/32, /128) &amp; Floating Routes
+ipv6 unicast-routing
+ip route 0.0.0.0 0.0.0.0 203.0.113.2
+ip route 0.0.0.0 0.0.0.0 198.51.100.2 5
+ip route 172.16.99.10 255.255.255.255 10.1.1.2
+ipv6 route 2001:db8:99::10/128 2001:db8:12::2
+ipv6 route ::/0 2001:db8:13::2 5
+
+! Single-Area OSPFv2 &amp; Troubleshooting
+router ospf 1
+  router-id 1.1.1.1
+  network 10.0.0.0 0.0.255.255 area 0
+  passive-interface gi0/1 (fix: no passive-interface gi0/0)
+  default-information originate
+  auto-cost reference-bandwidth 10000
+int gi0/0 -&gt; ip ospf 1 area 0 | ip ospf priority 200
+             ip ospf network point-to-point</pre>
+          </div>
+
+          <div class="panel card-pad">
+            <h2 class="card-h2">3. IP Services, Security &amp; SSH Hardening Cheat Sheet</h2>
+            <pre class="ref-code">! NAT / PAT Overload
+access-list 1 permit 10.10.0.0 0.0.255.255
+int gi0/0 -&gt; ip nat inside | int gi0/1 -&gt; ip nat outside
 ip nat inside source list 1 int gi0/1 overload
-int gi0/0 -&gt; ip ospf priority 200</pre>
+
+! DHCPv4 Server &amp; Relay
+ip dhcp excluded-address 192.168.30.1 192.168.30.10
+ip dhcp pool BRANCH_LAN -&gt; network 192.168.30.0 255.255.255.0
+  default-router 192.168.30.1 | dns-server 8.8.8.8
+int gi0/0 -&gt; ip helper-address 10.0.0.1
+
+! Extended &amp; Standard ACLs
+access-list 100 deny tcp 192.168.10.0 0.0.0.255 host 10.10.50.10 eq 80
+access-list 100 permit ip any any
+int gi0/0 -&gt; ip access-group 100 in
+
+! Port Security (Protect / Restrict / Shutdown) &amp; Snooping/DAI
+int fa0/3 -&gt; sw mo ac -&gt; sw po -&gt; sw po max 2
+  sw po mac st -&gt; sw po vio protect|restrict|shutdown
+ip dhcp snooping | ip dhcp snooping vlan 10 | ip arp inspection vlan 10
+
+! Device Hardening (Full SSHv2)
+hostname R1-EDGE | enable secret CiscoEn123 | service password-encryption
+ip domain-name corp.local | username admin secret CiscoAdm123
+crypto key generate rsa modulus 2048 | ip ssh version 2
+line vty 0 15 -&gt; login local | transport input ssh</pre>
           </div>
         </div>
       </section>
@@ -656,9 +727,9 @@ int gi0/0 -&gt; ip ospf priority 200</pre>
   </div>
 
   <!-- Offline Data Pools (1,000 CCNA v1.1 Questions + 20 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
-  <script src="data/ios_cli.js?v=6"></script>
-  <script src="data/questions.js?v=6"></script>
-  <script src="data/labs.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="data/ios_cli.js?v=7"></script>
+  <script src="data/questions.js?v=7"></script>
+  <script src="data/labs.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CCNA 200-301 — Cisco Packet Tracer Lab &amp; 100Q Exam Simulator</title>
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <div class="app-shell">
@@ -285,7 +285,7 @@
                     </div>
                   </div>
                   <div class="cli-hint">
-                    Packet Tracer IOS Helper &bull; Press <code>?</code> anytime for available configs (e.g. <code>?</code>, <code>ip ?</code>, <code>switchport ?</code>) &bull; <code>Tab</code> auto-completes &bull; ↑/↓ history
+                    Cisco IOS CLI &bull; Press <code>?</code> anywhere for full context help (e.g. <code>?</code>, <code>ip ?</code>, <code>sw tr ?</code>) &bull; Short commands work (<code>en</code>, <code>conf t</code>, <code>int g0/0</code>, <code>no sh</code>, <code>ex</code>, <code>wr</code>) &bull; <code>Tab</code> completes
                   </div>
                 </div>
 
@@ -306,31 +306,34 @@
               </div>
             </div>
 
-            <!-- Right Docked Panel: Packet Tracer Activity Wizard / Lab Instructions & Next/Skip Controls -->
-            <aside class="pt-activity-panel" aria-label="Packet Tracer Activity Instructions">
+            <!-- Right Docked Panel: Scenario-Based Lab Brief & Status (No Task Spoilers!) -->
+            <aside class="pt-activity-panel" aria-label="Packet Tracer Scenario Brief">
               <div class="pt-activity-header">
                 <div class="eyebrow-row">
                   <span class="lab-badge" id="labPasserBadge">Passer Lab #1</span>
-                  <span class="lab-score-pill" id="labOverallPill">0/6 Solved</span>
+                  <span class="lab-score-pill" id="labOverallPill">0/6 Done</span>
                 </div>
                 <h2 class="lab-title" id="labTitle">Lab 1 of 6: Extended ACL</h2>
-                <div class="pt-completion-box">
-                  <div class="pt-comp-labels">
-                    <span>Activity Completion</span>
-                    <strong class="mono text-cisco" id="ptCompletionPct">0%</strong>
-                  </div>
-                  <div class="progress-track">
-                    <div class="progress-fill" id="ptCompletionBar" style="width: 0%"></div>
+                <div class="pt-lab-status-banner in-progress" id="ptLabStatusBanner">
+                  <span class="status-dot-icon">●</span>
+                  <div>
+                    <strong>Status: In Progress</strong>
+                    <span>Configure the required devices via CLI to accomplish this scenario.</span>
                   </div>
                 </div>
               </div>
 
               <div class="pt-activity-body">
-                <div class="pt-section-title">Scenario &amp; Topology Brief</div>
-                <p class="lab-scenario-text" id="labScenarioText"></p>
+                <div class="pt-section-title">Scenario-Based Lab Question</div>
+                <div class="pt-scenario-card">
+                  <p class="lab-scenario-text" id="labScenarioText"></p>
+                </div>
 
-                <div class="pt-section-title" style="margin-top: 14px;">Configuration Objectives</div>
-                <div class="lab-objectives" id="labObjectives"></div>
+                <div class="pt-section-title" style="margin-top: 14px;">Devices to Configure</div>
+                <div class="pt-target-devices-row" id="ptTargetDevicesInfo"></div>
+                <p class="pt-cli-tip-note">
+                  Start on each device from User EXEC (<code>&gt;</code>): enter <code>en</code> &rarr; <code>conf t</code>, use <code>?</code> anytime to inspect available commands, and use shortened IOS syntax like <code>ex</code>, <code>int g0/0</code>, <code>no sh</code>, or <code>sw mo tr</code>. When every requirement across all devices is configured, <strong>DONE</strong> will appear automatically.
+                </p>
 
                 <div class="pt-helper-note" id="ptSkipNotice">
                   <strong>Can't finish this lab?</strong> You can click <strong>Next Lab (Skip) &gt;</strong> below to move on and still reach the 100-question exam.
@@ -652,9 +655,10 @@ int gi0/0 -&gt; ip ospf priority 200</pre>
     </div>
   </div>
 
-  <!-- Offline Data Pools (1,000 CCNA v1.1 Questions v3 + 20 Multi-Device Labs v3) -->
-  <script src="data/questions.js?v=4"></script>
-  <script src="data/labs.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <!-- Offline Data Pools (1,000 CCNA v1.1 Questions + 20 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
+  <script src="data/ios_cli.js?v=5"></script>
+  <script src="data/questions.js?v=5"></script>
+  <script src="data/labs.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

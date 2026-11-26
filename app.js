@@ -149,17 +149,16 @@
     const devList = lab.devices && lab.devices.length ? lab.devices : [lab.deviceName || "R1"];
     const deviceSessions = {};
     devList.forEach((devName) => {
-      const devObjCount = lab.objectives.filter((o) => (o.device || devList[0]) === devName).length;
       deviceSessions[devName] = {
         deviceName: devName,
-        mode: "config",
-        prompt: `${devName}(config)#`,
+        mode: "user",
+        prompt: `${devName}>`,
+        appliedConfigs: [],
         history: [
           {
             type: "out",
-            text: `Cisco IOS Software — ${devName} Console (${lab.id})\nTarget tasks on ${devName}: ${devObjCount} objective(s). Press '?' anytime for IOS config help.`,
+            text: `Cisco IOS Software — ${devName} Console (${lab.id})\nUser EXEC mode. Type 'enable' (or 'en') -> 'configure terminal' (or 'conf t') to begin configuring ${devName}.\nType '?' anytime for full context-sensitive IOS command help.`,
           },
-          { type: "cmd", prompt: `${devName}#`, cmd: "configure terminal" },
         ],
         cmdHistory: [],
         cmdCursor: -1,
@@ -253,8 +252,8 @@
     ptToolSelect: document.getElementById("ptToolSelect"),
     ptToolPdu: document.getElementById("ptToolPdu"),
     ptFastForwardBtn: document.getElementById("ptFastForwardBtn"),
-    ptCompletionPct: document.getElementById("ptCompletionPct"),
-    ptCompletionBar: document.getElementById("ptCompletionBar"),
+    ptLabStatusBanner: document.getElementById("ptLabStatusBanner"),
+    ptTargetDevicesInfo: document.getElementById("ptTargetDevicesInfo"),
     ptSkipNotice: document.getElementById("ptSkipNotice"),
     ptConfigPane: document.getElementById("ptConfigPane"),
     ptPhysicalPane: document.getElementById("ptPhysicalPane"),
@@ -264,7 +263,6 @@
     labTitle: document.getElementById("labTitle"),
     labTabs: document.getElementById("labTabs"),
     labScenarioText: document.getElementById("labScenarioText"),
-    labObjectives: document.getElementById("labObjectives"),
     topoCaption: document.getElementById("topoCaption"),
     topologySvg: document.getElementById("topologySvg"),
     cliDeviceTitle: document.getElementById("cliDeviceTitle"),
@@ -440,28 +438,33 @@
     if (!ls) return;
     const { lab } = ls;
     const solved = isLabSolved(ls);
-    const compPct = Math.round((ls.completedIds.size / lab.objectives.length) * 100);
     const isLastLab = state.currentLabIdx === state.examLabs.length - 1;
+    const devs = lab.devices || Object.keys(ls.deviceSessions);
 
     el.ptWindowTitle.textContent = `Cisco Packet Tracer — Lab ${state.currentLabIdx + 1} of ${state.examLabs.length}: ${lab.title} (.pka)`;
     el.labPasserBadge.textContent = lab.passerTag;
-    el.labOverallPill.textContent = `${solvedLabsCount()}/${state.examLabs.length} Solved`;
+    el.labOverallPill.textContent = `${solvedLabsCount()}/${state.examLabs.length} Done`;
     el.labTitle.textContent = `Lab ${state.currentLabIdx + 1} of ${state.examLabs.length}: ${lab.title}`;
     el.topoCaption.textContent = `Root / ${lab.id} (${lab.section})`;
     el.labScenarioText.textContent = lab.scenario;
 
-    el.ptCompletionPct.textContent = `${compPct}%`;
-    el.ptCompletionBar.style.width = `${compPct}%`;
+    // Lab Status Banner — stays "In Progress" until ALL devices satisfy the scenario, then lights up "DONE"!
+    if (el.ptLabStatusBanner) {
+      el.ptLabStatusBanner.className = `pt-lab-status-banner ${solved ? "done" : "in-progress"}`;
+      el.ptLabStatusBanner.innerHTML = solved
+        ? `<span class="status-check-icon">✓</span><div><strong>DONE — Lab Accomplished!</strong><span>All scenario requirements verified across ${escapeHtml(devs.join(", "))}.</span></div>`
+        : `<span class="status-dot-icon">●</span><div><strong>Status: In Progress</strong><span>Configure ${escapeHtml(devs.join(", "))} via CLI until the scenario is complete.</span></div>`;
+    }
 
-    // 6-Lab Switcher Pills in PT Titlebar
+    // 6-Lab Switcher Pills in PT Titlebar (no task count spoilers!)
     el.labTabs.innerHTML = "";
     state.examLabs.forEach((item, i) => {
       const btn = document.createElement("button");
       btn.type = "button";
       const s = isLabSolved(item);
       btn.className = `lab-tab${i === state.currentLabIdx ? " active" : ""}${s ? " solved" : item.skipped ? " skipped" : ""}`;
-      btn.innerHTML = `<span>Lab ${i + 1}</span>${s ? "<span>✓</span>" : item.skipped ? "<span>⏭</span>" : ""}`;
-      btn.title = `${item.lab.title} (${item.completedIds.size}/${item.lab.objectives.length})`;
+      btn.innerHTML = `<span>Lab ${i + 1}</span>${s ? "<span>✓ DONE</span>" : item.skipped ? "<span>⏭</span>" : ""}`;
+      btn.title = item.lab.title;
       btn.addEventListener("click", () => {
         state.currentLabIdx = i;
         renderLab();
@@ -469,33 +472,29 @@
       el.labTabs.appendChild(btn);
     });
 
-    // Objectives Checklist (grouped/tagged by device; clicking switches to that device's CLI!)
-    el.labObjectives.innerHTML = "";
-    lab.objectives.forEach((obj) => {
-      const done = ls.completedIds.has(obj.id);
-      const targetDev = obj.device || ls.activeDevice;
-      const isActiveDev = targetDev === ls.activeDevice;
-      const cleanText = obj.text.replace(/^\[[^\]]+\]\s*/, "");
-      const row = document.createElement("div");
-      row.className = `obj-item${done ? " done" : ""}${isActiveDev && !done ? " active-dev" : ""}`;
-      row.title = `Click to switch CLI console to ${targetDev}`;
-      row.innerHTML = `<span class="obj-check">${done ? "✓" : ""}</span><span><span class="obj-dev-tag">${escapeHtml(targetDev)}</span>${escapeHtml(cleanText)}</span>`;
-      row.addEventListener("click", () => switchLabDevice(ls, targetDev));
-      el.labObjectives.appendChild(row);
-    });
+    // Clickable Target Device Chips in Right Scenario Panel (no task counts!)
+    if (el.ptTargetDevicesInfo) {
+      el.ptTargetDevicesInfo.innerHTML = "";
+      devs.forEach((devName) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = `pt-target-chip${devName === ls.activeDevice ? " active" : ""}${solved ? " done" : ""}`;
+        chip.innerHTML = `<span>${escapeHtml(devName)}</span>${solved ? "<span>✓</span>" : ""}`;
+        chip.title = `Open ${devName} CLI console`;
+        chip.addEventListener("click", () => switchLabDevice(ls, devName));
+        el.ptTargetDevicesInfo.appendChild(chip);
+      });
+    }
 
-    // Multi-Device Switcher Bar in PT Device Window
+    // Multi-Device Switcher Bar in PT Device Window (no partial task counts!)
     const switcher = document.getElementById("ptDeviceSwitcher");
     if (switcher) {
-      const devs = lab.devices || Object.keys(ls.deviceSessions);
       switcher.innerHTML = `<span class="pt-switcher-label">Configure Devices (${devs.length}):</span>`;
       devs.forEach((devName) => {
-        const prog = getDeviceProgress(ls, devName);
-        const devDone = prog.total > 0 && prog.done === prog.total;
         const pill = document.createElement("button");
         pill.type = "button";
-        pill.className = `pt-dev-pill${devName === ls.activeDevice ? " active" : ""}${devDone ? " done" : ""}`;
-        pill.innerHTML = `<span>${escapeHtml(devName)}</span><span class="pt-dev-count">${devDone ? "✓" : `${prog.done}/${prog.total}`}</span>`;
+        pill.className = `pt-dev-pill${devName === ls.activeDevice ? " active" : ""}${solved ? " done" : ""}`;
+        pill.innerHTML = `<span>${escapeHtml(devName)}</span><span class="pt-dev-count">${solved ? "✓ DONE" : "CLI"}</span>`;
         pill.addEventListener("click", () => switchLabDevice(ls, devName));
         switcher.appendChild(pill);
       });
@@ -622,10 +621,8 @@
       svg += `<rect class="pt-node-halo" x="-48" y="-34" width="96" height="84" rx="10" />`;
       svg += getCiscoPtDeviceSvg(nd.type);
       if (isCfg) {
-        const prog = getDeviceProgress(ls, nd.label);
-        const done = prog.total > 0 && prog.done === prog.total;
-        svg += `<rect x="14" y="-31" width="32" height="15" rx="4" fill="${done ? "#16a34a" : "#0284c7"}" stroke="#ffffff" stroke-width="1"/>`;
-        svg += `<text x="30" y="-20.5" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="8.2" font-weight="800">${done ? "✓ OK" : `${prog.done}/${prog.total}`}</text>`;
+        svg += `<rect x="14" y="-31" width="34" height="15" rx="4" fill="${solved ? "#16a34a" : "#0284c7"}" stroke="#ffffff" stroke-width="1"/>`;
+        svg += `<text x="31" y="-20.5" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="7.8" font-weight="800">${solved ? "✓ DONE" : "CLI"}</text>`;
       }
       svg += `<text x="0" y="32" text-anchor="middle" fill="#0f172a" font-size="11.5" font-weight="700">${escapeHtml(nd.label)}</text>`;
       svg += `<text x="0" y="45" text-anchor="middle" fill="#475569" font-size="9.5" font-family="monospace" font-weight="600">${escapeHtml(nd.sub)}</text>`;
@@ -759,312 +756,54 @@
     if (pingBtn) {
       pingBtn.onclick = () => {
         outPre.textContent = solved
-          ? `C:\\> ping ${nd ? nd.sub : "10.10.10.1"}\nReply from ${nd ? nd.sub : "10.10.10.1"}: bytes=32 time=1ms TTL=128\nReply from ${nd ? nd.sub : "10.10.10.1"}: bytes=32 time<1ms TTL=128\nPackets: Sent = 4, Received = 4, Lost = 0 (0% loss) — Lab Verified!`
-          : `C:\\> ping ${nd ? nd.sub : "10.10.10.1"}\nRequest timed out.\nNote: Complete all ${lab.objectives.length} configuration objectives in the CLI tab (${ls.completedIds.size}/${lab.objectives.length} done).`;
+          ? `C:\\> ping ${nd ? nd.sub : "10.10.10.1"}\nReply from ${nd ? nd.sub : "10.10.10.1"}: bytes=32 time=1ms TTL=128\nReply from ${nd ? nd.sub : "10.10.10.1"}: bytes=32 time<1ms TTL=128\nPackets: Sent = 4, Received = 4, Lost = 0 (0% loss) — Lab DONE!`
+          : `C:\\> ping ${nd ? nd.sub : "10.10.10.1"}\nRequest timed out.\nNote: Required device configurations are not yet complete across ${(lab.devices || [ls.activeDevice]).join(", ")}.`;
       };
     }
     if (ipBtn) {
       ipBtn.onclick = () => {
-        outPre.textContent = `Device: ${nd ? nd.label : lab.deviceName}\nAddress / Role: ${nd ? nd.sub : "Default"}\nLab Section: ${lab.section}\nObjectives Satisfied: ${ls.completedIds.size}/${lab.objectives.length}`;
+        outPre.textContent = `Device: ${nd ? nd.label : ls.activeDevice}\nAddress / Role: ${nd ? nd.sub : "Default"}\nLab Section: ${lab.section}\nLab Status: ${solved ? "DONE (Verified)" : "In Progress"}`;
       };
     }
   }
 
   // ============================================================================
-  // CISCO PACKET TRACER CONTEXT-SENSITIVE '?' HELPER & TAB COMPLETION TREE
+  // CISCO PACKET TRACER FULL '?' CONTEXT HELPER, TAB COMPLETION & SHORT COMMANDS
+  // Powered by window.CISCO_IOS_CLI (data/ios_cli.js)
   // ============================================================================
-  const IOS_HELP_TREES = {
-    priv: {
-      configure: { desc: "Enter configuration mode", sub: { terminal: { desc: "Configure from the terminal <cr>" } } },
-      show: {
-        desc: "Show running system information",
-        sub: {
-          "running-config": { desc: "Current operating configuration <cr>" },
-          "ip": {
-            desc: "IP information",
-            sub: {
-              "interface": { desc: "IP interface status and configuration", sub: { brief: { desc: "Brief summary of IP status <cr>" } } },
-              "route": { desc: "IP routing table <cr>" },
-              "ospf": { desc: "OSPF information", sub: { neighbor: { desc: "OSPF neighbor list <cr>" } } },
-              "nat": { desc: "IP NAT information", sub: { translations: { desc: "Translation entries <cr>" } } },
-              "dhcp": { desc: "DHCP information", sub: { snooping: { desc: "DHCP snooping status <cr>" }, binding: { desc: "DHCP address bindings <cr>" } } },
-              "arp": { desc: "ARP information", sub: { inspection: { desc: "Dynamic ARP inspection status <cr>" } } },
-            },
-          },
-          "vlan": { desc: "VTP VLAN status", sub: { brief: { desc: "Brief VLAN summary <cr>" } } },
-          "interfaces": { desc: "Interface status and configuration", sub: { trunk: { desc: "Show trunk interfaces <cr>" }, status: { desc: "Show interface line status <cr>" } } },
-          "etherchannel": { desc: "EtherChannel information", sub: { summary: { desc: "One-line summary per channel-group <cr>" } } },
-          "spanning-tree": { desc: "Spanning tree topology <cr>" },
-          "cdp": { desc: "CDP information", sub: { neighbors: { desc: "CDP neighbor entries <cr>" } } },
-          "lldp": { desc: "LLDP information", sub: { neighbors: { desc: "LLDP neighbor entries <cr>" } } },
-          "ntp": { desc: "NTP information", sub: { status: { desc: "NTP synchronization status <cr>" } } },
-          "access-lists": { desc: "List access lists <cr>" },
-          "standby": { desc: "HSRP information", sub: { brief: { desc: "Brief HSRP status <cr>" } } },
-        },
-      },
-      verify: { desc: "Run Packet Tracer lab verification check <cr>" },
-      clear: { desc: "Clear terminal screen <cr>" },
-    },
-    config: {
-      "access-list": {
-        desc: "Add an access list entry",
-        sub: {
-          "<1-99>": { desc: "IP standard access list", sub: { permit: { desc: "Specify packets to forward <ip> <wildcard>" }, deny: { desc: "Specify packets to reject <ip> <wildcard>" } } },
-          "<100-199>": { desc: "IP extended access list", sub: { permit: { desc: "Specify packets to forward <tcp|udp|ip> <src> <dst>" }, deny: { desc: "Specify packets to reject <tcp|udp|ip> <src> <dst> eq <port>" } } },
-        },
-      },
-      interface: {
-        desc: "Select an interface to configure",
-        sub: {
-          gigabitethernet: { desc: "GigabitEthernet IEEE 802.3z (e.g. 0/0, 0/1, 0/0.10)" },
-          fastethernet: { desc: "FastEthernet IEEE 802.3 (e.g. 0/1, 0/2, 0/3, 0/5)" },
-          "port-channel": { desc: "Ethernet Channel of interfaces (e.g. 1)" },
-          range: { desc: "Interface range command", sub: { gigabitethernet: { desc: "Range of GigabitEthernet ports (e.g. 0/1 - 2)" }, fastethernet: { desc: "Range of FastEthernet ports (e.g. 0/1 - 5)" } } },
-        },
-      },
-      ip: {
-        desc: "Global IP configuration subcommands",
-        sub: {
-          "access-list": { desc: "Named access-list", sub: { standard: { desc: "Standard Access List <name>" }, extended: { desc: "Extended Access List <name>" } } },
-          "arp": { desc: "Global ARP configuration", sub: { inspection: { desc: "Dynamic ARP Inspection (DAI)", sub: { vlan: { desc: "Enable DAI on VLAN <vlan-id>" }, validate: { desc: "Validate addresses: src-mac dst-mac ip" } } } } },
-          "dhcp": {
-            desc: "Configure DHCP server and relay/snooping parameters",
-            sub: {
-              "excluded-address": { desc: "Prevent DHCP from assigning IP range <low-ip> <high-ip>" },
-              pool: { desc: "Configure DHCP address pool <pool-name>" },
-              snooping: { desc: "DHCP Snooping (<cr> to enable globally)", sub: { vlan: { desc: "Enable DHCP Snooping on VLAN <vlan-id>" }, "<cr>": { desc: "Enable DHCP Snooping globally" } } },
-            },
-          },
-          "domain-name": { desc: "Define default domain name (e.g. corp.local)" },
-          "http": { desc: "HTTP server configuration", sub: { "secure-server": { desc: "Enable HTTPS server for RESTCONF <cr>" } } },
-          nat: {
-            desc: "NAT configuration commands",
-            sub: {
-              inside: {
-                desc: "Inside address translation",
-                sub: {
-                  source: {
-                    desc: "Source address translation",
-                    sub: {
-                      list: { desc: "Specify access list <acl-num> interface <int> overload" },
-                      static: { desc: "Specify static local->global mapping <local-ip> <global-ip>" },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          route: { desc: "Establish static routes (<dest> <mask> <next-hop> [AD])" },
-          routing: { desc: "Enable IP routing <cr>" },
-          ssh: { desc: "Configure SSH options", sub: { version: { desc: "Specify protocol version (2)" } } },
-        },
-      },
-      ipv6: {
-        desc: "Global IPv6 configuration commands",
-        sub: {
-          "unicast-routing": { desc: "Enable unicast IPv6 routing <cr>" },
-          route: { desc: "Configure static IPv6 route (e.g. ::/0 <next-hop>)" },
-        },
-      },
-      line: { desc: "Configure a terminal line", sub: { vty: { desc: "Virtual terminal (e.g. 0 15)" }, console: { desc: "Primary terminal line (0)" } } },
-      lldp: { desc: "Global LLDP configuration subcommands", sub: { run: { desc: "Enable LLDP globally <cr>" } } },
-      "netconf-yang": { desc: "Enable NETCONF YANG server over SSH port 830 <cr>" },
-      no: { desc: "Negate a command or set its defaults", sub: { cdp: { desc: "Disable CDP globally (run)" }, "ip": { desc: "Negate IP configuration" } } },
-      ntp: {
-        desc: "Configure Network Time Protocol (NTP)",
-        sub: {
-          authenticate: { desc: "Authenticate time sources <cr>" },
-          "authentication-key": { desc: "Authentication key (<key-id> md5 <secret>)" },
-          "trusted-key": { desc: "Key numbers for trusted time sources (<key-id>)" },
-          server: { desc: "Configure NTP server (<ip-address> [key <id>])" },
-        },
-      },
-      restconf: { desc: "Enable RESTCONF HTTPS API server <cr>" },
-      router: { desc: "Enable a routing process", sub: { ospf: { desc: "Open Shortest Path First (<process-id>)" } } },
-      "spanning-tree": {
-        desc: "Spanning Tree Subsystem",
-        sub: {
-          mode: { desc: "Spanning tree operating mode", sub: { "rapid-pvst": { desc: "Rapid Per-VLAN Spanning Tree <cr>" }, pvst: { desc: "Per-VLAN Spanning Tree <cr>" } } },
-          vlan: { desc: "VLAN Switch Spanning Tree (<vlan-id> root primary|secondary)" },
-        },
-      },
-      vlan: { desc: "Configure a VLAN (<1-4094>)" },
-      do: { desc: "Run privileged EXEC command (e.g. do show run)" },
-      exit: { desc: "Exit from configure mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-    "config-if": {
-      "channel-group": { desc: "EtherChannel/port bundling (<1-64> mode active|passive|desirable|auto|on)" },
-      encapsulation: { desc: "Set encapsulation type for subinterface", sub: { dot1q: { desc: "IEEE 802.1Q Virtual LAN (<vlan-id>)" } } },
-      ip: {
-        desc: "Interface IP configuration subcommands",
-        sub: {
-          "access-group": { desc: "Specify access control for packets (<acl> in|out)" },
-          address: { desc: "Set the IPv4 address of an interface (<ip> <mask>)" },
-          "arp": { desc: "ARP interface config", sub: { inspection: { desc: "Dynamic ARP Inspection", sub: { trust: { desc: "Configure interface as DAI trusted <cr>" } } } } },
-          dhcp: {
-            desc: "DHCP interface config",
-            sub: {
-              snooping: {
-                desc: "DHCP Snooping interface options",
-                sub: {
-                  trust: { desc: "Trust DHCP server replies on this port <cr>" },
-                  limit: { desc: "DHCP Snooping limit", sub: { rate: { desc: "Packets per second (e.g. 15)" } } },
-                },
-              },
-            },
-          },
-          "helper-address": { desc: "Specify a destination DHCP relay address (<ip>)" },
-          nat: { desc: "NAT interface commands", sub: { inside: { desc: "Inside interface for address translation <cr>" }, outside: { desc: "Outside interface for address translation <cr>" } } },
-          ospf: { desc: "OSPF interface commands", sub: { priority: { desc: "Router DR election priority (<0-255>)" }, "<process-id>": { desc: "Enable OSPF process on interface (area <area-id>)" } } },
-        },
-      },
-      ipv6: { desc: "IPv6 interface subcommands", sub: { address: { desc: "Configure IPv6 address (<prefix/len> or <fe80::1 link-local>)" } } },
-      lldp: { desc: "LLDP interface subcommands", sub: { transmit: { desc: "Enable LLDP transmission on interface <cr>" }, receive: { desc: "Enable LLDP reception on interface <cr>" } } },
-      no: {
-        desc: "Negate a command or bring interface up",
-        sub: {
-          shutdown: { desc: "Restart / enable the interface <cr>" },
-          cdp: { desc: "Disable CDP on this interface", sub: { enable: { desc: "Disable CDP on interface <cr>" } } },
-          switchport: { desc: "Convert switchport to Layer 3 routed port <cr>" },
-        },
-      },
-      shutdown: { desc: "Shutdown the selected interface <cr>" },
-      "spanning-tree": {
-        desc: "Spanning Tree interface options",
-        sub: {
-          portfast: { desc: "Enable edge PortFast immediately <cr>" },
-          bpduguard: { desc: "Prevent BPDUs on edge port", sub: { enable: { desc: "Enable BPDU Guard on this interface <cr>" } } },
-        },
-      },
-      standby: {
-        desc: "HSRP interface configuration commands",
-        sub: {
-          version: { desc: "HSRP version (1 or 2)" },
-          "<group>": { desc: "HSRP group number (ip <vip> | priority <0-255> | preempt)" },
-        },
-      },
-      switchport: {
-        desc: "Set switching mode characteristics",
-        sub: {
-          mode: { desc: "Set trunking mode", sub: { access: { desc: "Static access port <cr>" }, trunk: { desc: "Static 802.1Q trunk <cr>" } } },
-          access: { desc: "Set access mode characteristics", sub: { vlan: { desc: "Set VLAN when in access mode (<vlan-id>)" } } },
-          voice: { desc: "Voice appliance attributes", sub: { vlan: { desc: "Vlan for voice traffic (<vlan-id>)" } } },
-          trunk: {
-            desc: "Set trunking characteristics",
-            sub: {
-              native: { desc: "Set trunking native characteristics", sub: { vlan: { desc: "Set native VLAN (<vlan-id>)" } } },
-              allowed: { desc: "Set allowed VLANs", sub: { vlan: { desc: "Allowed VLAN list (<vlan-list>)" } } },
-            },
-          },
-          "port-security": {
-            desc: "Security related command (<cr> to enable)",
-            sub: {
-              maximum: { desc: "Max secure addresses (<1-132>)" },
-              "mac-address": { desc: "Secure mac address", sub: { sticky: { desc: "Configure dynamic secure addresses as sticky <cr>" } } },
-              violation: { desc: "Security violation mode", sub: { protect: { desc: "Drop silently" }, restrict: { desc: "Drop + log/count" }, shutdown: { desc: "Err-disable port" } } },
-              "<cr>": { desc: "Enable port-security on interface" },
-            },
-          },
-          nonegotiate: { desc: "Disable DTP negotiation frames <cr>" },
-        },
-      },
-      exit: { desc: "Exit interface configuration mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-    "config-vlan": {
-      name: { desc: "ASCII name of the VLAN (e.g. SALES)" },
-      exit: { desc: "Apply changes and exit VLAN mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-    "config-router": {
-      "router-id": { desc: "OSPF router-id in IPv4 format (e.g. 1.1.1.1)" },
-      network: { desc: "Enable routing on an IP network (<net> <wildcard> area <id>)" },
-      "passive-interface": { desc: "Suppress OSPF Hellos on an interface (<int>)" },
-      "default-information": { desc: "Control distribution of default information", sub: { originate: { desc: "Distribute a default route <cr>" } } },
-      "auto-cost": { desc: "Calculate OSPF cost according to bandwidth", sub: { "reference-bandwidth": { desc: "Reference bandwidth in Mbps" } } },
-      exit: { desc: "Exit OSPF router configuration mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-    "config-acl": {
-      permit: { desc: "Specify packets to forward (<ip> <wildcard> | any | host <ip>)" },
-      deny: { desc: "Specify packets to reject (<ip> <wildcard> | any | host <ip>)" },
-      exit: { desc: "Exit ACL configuration mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-    "config-line": {
-      "access-class": { desc: "Filter connections based on an IP access list (<acl> in|out)" },
-      transport: { desc: "Define transport protocols for line", sub: { input: { desc: "Define incoming protocols", sub: { ssh: { desc: "Allow SSH only <cr>" }, all: { desc: "Allow all protocols <cr>" }, none: { desc: "Block all protocols <cr>" } } } } },
-      login: { desc: "Enable password checking", sub: { local: { desc: "Local username/password checking <cr>" } } },
-      "exec-timeout": { desc: "Set the EXEC timeout (<minutes> <seconds>)" },
-      exit: { desc: "Exit line configuration mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-    "config-dhcp": {
-      network: { desc: "Network number and mask (<net> <mask>)" },
-      "default-router": { desc: "Default gateway router IP (<ip>)" },
-      "dns-server": { desc: "DNS server IP address (<ip>)" },
-      "domain-name": { desc: "Domain name for DHCP clients (<name>)" },
-      exit: { desc: "Exit DHCP pool configuration mode <cr>" },
-      end: { desc: "Return to privileged EXEC mode <cr>" },
-    },
-  };
-
-  function resolveIosContext(mode, rawInput) {
-    const root = IOS_HELP_TREES[mode] || IOS_HELP_TREES.config;
-    const hasTrailingSpace = /\s$/.test(rawInput);
-    const trimmed = rawInput.trim();
-    if (!trimmed) {
-      return { entries: Object.entries(root), partial: "", completedTokens: [] };
-    }
-    const tokens = trimmed.split(/\s+/);
-    const walkTokens = hasTrailingSpace ? tokens : tokens.slice(0, -1);
-    const partial = hasTrailingSpace ? "" : tokens[tokens.length - 1].toLowerCase();
-
-    let node = root;
-    const completedTokens = [];
-    for (const tok of walkTokens) {
-      const low = tok.toLowerCase();
-      // Exact or unambiguous prefix match (or numeric placeholder like <1-99>, <group>)
-      const keys = Object.keys(node);
-      let matchedKey = keys.find((k) => k.toLowerCase() === low);
-      if (!matchedKey) {
-        const prefMatches = keys.filter((k) => !k.startsWith("<") && k.toLowerCase().startsWith(low));
-        if (prefMatches.length === 1) matchedKey = prefMatches[0];
-      }
-      if (!matchedKey && /^\d+$/.test(low)) {
-        matchedKey = keys.find((k) => k.startsWith("<") && k !== "<cr>");
-      }
-      if (!matchedKey || !node[matchedKey] || !node[matchedKey].sub) {
-        return { entries: [], partial, completedTokens, leafDesc: matchedKey && node[matchedKey] ? node[matchedKey].desc : null };
-      }
-      completedTokens.push(matchedKey.startsWith("<") ? tok : matchedKey);
-      node = node[matchedKey].sub;
-    }
-
-    const entries = Object.entries(node).filter(([k]) => !partial || k.toLowerCase().startsWith(partial));
-    return { entries, partial, completedTokens };
-  }
+  const IOS_CLI = window.CISCO_IOS_CLI;
 
   function showContextHelp(currentText) {
     const ls = state.examLabs[state.currentLabIdx];
-    if (!ls) return;
+    if (!ls || !IOS_CLI) return;
     const sess = getActiveSession(ls);
-    const mode = sess.mode || "config";
-    const { entries, leafDesc } = resolveIosContext(mode, currentText);
+    const mode = sess.mode || "user";
+    const res = IOS_CLI.resolveContext(mode, currentText);
 
-    // Echo command + '?' just like Cisco Packet Tracer / IOS
+    // Echo command + '?' exactly like Cisco Packet Tracer / IOS
     sess.history.push({ type: "cmd", prompt: sess.prompt, cmd: `${currentText}?` });
 
-    if (entries.length > 0) {
-      const lines = entries
-        .map(([k, v]) => `  ${k.padEnd(20, " ")}${v.desc}`)
-        .join("\n");
-      sess.history.push({ type: "out", text: lines });
-    } else if (leafDesc) {
-      sess.history.push({ type: "out", text: `  <parameters>        ${leafDesc}\n  <cr>` });
+    if (res.ambiguous) {
+      sess.history.push({
+        type: "out",
+        cls: "warn",
+        text: `% Ambiguous command: matches ${res.ambiguous.join(", ")}`,
+      });
+    } else if (res.entries.length > 0) {
+      const lines = res.entries.map(([k, v]) => `  ${k.padEnd(22, " ")}${v.desc}`);
+      if (res.cr) lines.push(`  ${"<cr>".padEnd(22, " ")}`);
+      sess.history.push({ type: "out", text: lines.join("\n") });
+    } else if (res.leafDesc || res.cr) {
+      const lines = [];
+      if (res.leafDesc) lines.push(`  ${"<info>".padEnd(22, " ")}${res.leafDesc}`);
+      if (res.cr) lines.push(`  ${"<cr>".padEnd(22, " ")}`);
+      sess.history.push({ type: "out", text: lines.join("\n") });
     } else {
-      sess.history.push({ type: "out", cls: "warn", text: "% Unrecognized command at '^' marker. Type '?' on an empty line for available commands." });
+      sess.history.push({
+        type: "out",
+        cls: "warn",
+        text: "% Unrecognized command at '^' marker. Type '?' on an empty line for available commands.",
+      });
     }
 
     renderLab();
@@ -1075,14 +814,14 @@
 
   function tryTabAutocomplete(currentText) {
     const ls = state.examLabs[state.currentLabIdx];
-    if (!ls) return currentText;
+    if (!ls || !IOS_CLI) return currentText;
     const sess = getActiveSession(ls);
     const trimmed = currentText.trim();
     if (!trimmed || /\s$/.test(currentText)) return currentText;
-    const { entries, completedTokens } = resolveIosContext(sess.mode || "config", currentText);
-    const nonPlaceholder = entries.filter(([k]) => !k.startsWith("<"));
+    const res = IOS_CLI.resolveContext(sess.mode || "user", currentText);
+    const nonPlaceholder = res.entries.filter(([k]) => !k.startsWith("<"));
     if (nonPlaceholder.length === 1) {
-      return [...completedTokens, nonPlaceholder[0][0]].join(" ") + " ";
+      return [...res.completedTokens, nonPlaceholder[0][0]].join(" ") + " ";
     }
     if (nonPlaceholder.length > 1) {
       showContextHelp(currentText);
@@ -1090,7 +829,7 @@
     return currentText;
   }
 
-  // Interactive Multi-Device Cisco IOS CLI Engine
+  // Interactive Multi-Device Cisco IOS CLI Engine (Authentic User EXEC -> Priv EXEC -> Config -> Submodes)
   function executeCliCommand(raw, explicitDevice = null) {
     const ls = state.examLabs[state.currentLabIdx];
     if (!ls) return;
@@ -1106,115 +845,224 @@
       sess.cmdHistory.push(cmd);
       sess.cmdCursor = sess.cmdHistory.length;
     } else {
-      renderLab();
+      if (!explicitDevice) renderLab();
       return;
     }
 
-    const lower = cmd.toLowerCase();
-
-    if (lower === "clear") {
+    const rawLower = cmd.toLowerCase();
+    if (rawLower === "clear" || rawLower === "cls") {
       sess.history = [];
-      renderLab();
+      if (!explicitDevice) renderLab();
       return;
     }
-    if (lower === "help") {
+    if (rawLower === "help") {
       showContextHelp("");
       return;
     }
-    if (lower === "verify" || lower.startsWith("show ") || lower.startsWith("do show ") || lower.startsWith("sh ")) {
-      if (lower.includes("run")) {
-        const applied = sess.history
-          .filter((h) => h.type === "cmd" && !h.cmd.startsWith("!") && !/^(sh|show|verify|clear|\?|help)/i.test(h.cmd))
-          .map((h) => "  " + h.cmd)
-          .join("\n");
-        sess.history.push({ type: "out", text: `Building configuration...\nhostname ${dev}\n${applied || "  ! (No user commands applied on " + dev + " yet)"}` });
-      } else {
-        const doneCount = ls.completedIds.size;
-        const totalObj = ls.lab.objectives.length;
-        const perDevSummary = (ls.lab.devices || [dev])
-          .map((d) => {
-            const p = getDeviceProgress(ls, d);
-            return `${d}: ${p.done}/${p.total}`;
-          })
-          .join(" | ");
+    if (rawLower === "verify" || rawLower === "do verify") {
+      const solvedNow = isLabSolved(ls);
+      const devs = ls.lab.devices || [dev];
+      if (solvedNow) {
         sess.history.push({
           type: "out",
-          cls: doneCount === totalObj ? "success" : "",
-          text: `${ls.lab.verifyOutput}\n[Multi-Device Check: ${perDevSummary} — Overall ${doneCount}/${totalObj} (${Math.round((doneCount / totalObj) * 100)}%)]`,
+          cls: "success",
+          text: `✓ DONE — LAB ACCOMPLISHED!\n${ls.lab.verifyOutput}`,
         });
-      }
-      renderLab();
-      return;
-    }
-
-    // Mode Transitions (per-device!)
-    if (lower === "end") {
-      sess.mode = "priv";
-      sess.prompt = `${dev}#`;
-      sess.history.push({ type: "out", text: "%SYS-5-CONFIG_I: Configured from console by console" });
-    } else if (lower === "exit") {
-      if (sess.mode !== "config" && sess.mode !== "priv") {
-        sess.mode = "config";
-        sess.prompt = `${dev}(config)#`;
       } else {
-        sess.mode = "priv";
-        sess.prompt = `${dev}#`;
-      }
-    } else if (lower === "enable" || lower === "en") {
-      sess.mode = "priv";
-      sess.prompt = `${dev}#`;
-    } else if (lower === "conf t" || lower === "configure terminal") {
-      sess.mode = "config";
-      sess.prompt = `${dev}(config)#`;
-    } else if (/^int(erface)?\s+/i.test(cmd)) {
-      sess.mode = "config-if";
-      sess.prompt = `${dev}(config-if)#`;
-    } else if (/^vlan\s+\d+/i.test(cmd)) {
-      sess.mode = "config-vlan";
-      sess.prompt = `${dev}(config-vlan)#`;
-    } else if (/^router\s+ospf/i.test(cmd)) {
-      sess.mode = "config-router";
-      sess.prompt = `${dev}(config-router)#`;
-    } else if (/^ip\s+access-list\s+/i.test(cmd)) {
-      sess.mode = "config-acl";
-      sess.prompt = `${dev}(config-std-nacl)#`;
-    } else if (/^line\s+vty/i.test(cmd)) {
-      sess.mode = "config-line";
-      sess.prompt = `${dev}(config-line)#`;
-    } else if (/^ip\s+dhcp\s+pool/i.test(cmd)) {
-      sess.mode = "config-dhcp";
-      sess.prompt = `${dev}(dhcp-config)#`;
-    }
-
-    // Grade strictly against objectives belonging to THIS active device!
-    let newlyMatched = 0;
-    ls.lab.objectives.forEach((obj) => {
-      if ((obj.device || dev) === dev && !ls.completedIds.has(obj.id) && obj.pattern.test(cmd)) {
-        ls.completedIds.add(obj.id);
-        newlyMatched++;
-      }
-    });
-
-    if (newlyMatched > 0) {
-      const devProg = getDeviceProgress(ls, dev);
-      if (isLabSolved(ls)) {
-        ls.skipped = false;
-        sess.history.push({ type: "out", cls: "success", text: `✓ Activity 100% Complete across all devices! Click "Next Lab >" to continue.` });
-        if (!explicitDevice) showToast(`Lab ${state.currentLabIdx + 1}/6 (${ls.lab.title}) completed at 100%!`);
-      } else if (devProg.done === devProg.total) {
-        sess.history.push({ type: "out", cls: "success", text: `✓ All tasks on ${dev} complete (${devProg.done}/${devProg.total})! Switch to the next device to finish this lab.` });
-      } else {
-        sess.history.push({ type: "out", cls: "success", text: `✓ Objective matched on ${dev} (${devProg.done}/${devProg.total} on ${dev}; ${ls.completedIds.size}/${ls.lab.objectives.length} total).` });
-      }
-    } else if (!explicitDevice) {
-      // Helpful hint if user typed a valid command meant for a different device
-      const wrongDevObj = ls.lab.objectives.find((o) => o.device !== dev && !ls.completedIds.has(o.id) && o.pattern.test(cmd));
-      if (wrongDevObj) {
         sess.history.push({
           type: "out",
           cls: "warn",
-          text: `ℹ Note: That command matches an objective on ${wrongDevObj.device}. Click ${wrongDevObj.device} above (or on the topology) to apply it on ${wrongDevObj.device}.`,
+          text: `Lab Status: INCOMPLETE — One or more scenario requirements are not yet configured across ${devs.join(", ")}.\nReview the scenario brief and use 'show running-config' (or 'do sh run') on each device to inspect your configuration.`,
         });
+      }
+      if (!explicitDevice) renderLab();
+      return;
+    }
+
+    // Expand shortened Cisco IOS commands (e.g. ex -> exit, en -> enable, conf t -> configure terminal, sw tr na vl 99 -> switchport trunk native vlan 99)
+    const exp = IOS_CLI ? IOS_CLI.expandCommand(sess.mode, cmd) : { ok: true, expanded: cmd };
+    if (!exp.ok) {
+      let errMsg = exp.error || "% Invalid input detected at '^' marker.";
+      if (sess.mode === "user" && !exp.error.includes("Ambiguous")) {
+        errMsg += " (Hint: type 'en' or 'enable' to enter Privileged EXEC mode, or '?' for available commands.)";
+      } else if (sess.mode === "priv" && !exp.error.includes("Ambiguous")) {
+        errMsg += " (Hint: type 'conf t' or 'configure terminal' to enter Global Configuration mode, or '?' for help.)";
+      }
+      sess.history.push({ type: "out", cls: "warn", text: errMsg });
+      if (!explicitDevice) renderLab();
+      return;
+    }
+
+    const expanded = exp.expanded;
+    const lower = expanded.toLowerCase();
+
+    // Save config commands (wr / write memory / copy running-config startup-config / do wr)
+    if (/^(do\s+)?(write(\s+memory)?|copy\s+running-config\s+startup-config)$/i.test(expanded)) {
+      sess.history.push({ type: "out", text: "Building configuration...\n[OK]" });
+      if (!explicitDevice) renderLab();
+      return;
+    }
+
+    // Ping / Traceroute simulation
+    if (/^(do\s+)?ping\s+/i.test(expanded)) {
+      const target = expanded.replace(/^(do\s+)?ping\s+/i, "").trim();
+      const solvedNow = isLabSolved(ls);
+      sess.history.push({
+        type: "out",
+        cls: solvedNow ? "success" : "",
+        text: solvedNow
+          ? `Type escape sequence to abort.\nSending 5, 100-byte ICMP Echos to ${target}, timeout is 2 seconds:\n!!!!!\nSuccess rate is 100 percent (5/5), round-trip min/avg/max = 1/1/2 ms`
+          : `Type escape sequence to abort.\nSending 5, 100-byte ICMP Echos to ${target}, timeout is 2 seconds:\n.....\nSuccess rate is 0 percent (0/5)`,
+      });
+      if (!explicitDevice) renderLab();
+      return;
+    }
+
+    // Verify / Check Results (NO per-objective spoilers!)
+    if (lower === "verify" || lower === "do verify") {
+      const solvedNow = isLabSolved(ls);
+      const devs = ls.lab.devices || [dev];
+      if (solvedNow) {
+        sess.history.push({
+          type: "out",
+          cls: "success",
+          text: `✓ DONE — LAB ACCOMPLISHED!\n${ls.lab.verifyOutput}`,
+        });
+      } else {
+        sess.history.push({
+          type: "out",
+          cls: "warn",
+          text: `Lab Status: INCOMPLETE — One or more scenario requirements are not yet configured across ${devs.join(", ")}.\nReview the scenario brief and use 'show running-config' (or 'do sh run') on each device to inspect your configuration.`,
+        });
+      }
+      if (!explicitDevice) renderLab();
+      return;
+    }
+
+    // Show commands (show / do show)
+    if (lower.startsWith("show ") || lower.startsWith("do show ")) {
+      if (lower.includes("running-config") || lower.includes("startup-config")) {
+        const applied = sess.appliedConfigs.map((c) => "  " + c).join("\n");
+        sess.history.push({
+          type: "out",
+          text: `Building configuration...\n!\nhostname ${dev}\n!\n${applied || "  ! (No configuration commands applied on " + dev + " yet)"}\n!\nend`,
+        });
+      } else {
+        const solvedNow = isLabSolved(ls);
+        const appliedCount = sess.appliedConfigs.length;
+        sess.history.push({
+          type: "out",
+          cls: solvedNow ? "success" : "",
+          text: solvedNow
+            ? `${ls.lab.verifyOutput}\n[Status: DONE — All scenario requirements active]`
+            : `${dev} operational output (${appliedCount} config line(s) applied on ${dev}).\nUse 'show running-config' (or 'do sh run') to inspect full configuration.`,
+        });
+      }
+      if (!explicitDevice) renderLab();
+      return;
+    }
+
+    // Authentic IOS Mode Transitions
+    let isModeNavOnly = false;
+    if (lower === "enable") {
+      if (sess.mode === "user") {
+        sess.mode = "priv";
+        sess.prompt = `${dev}#`;
+        isModeNavOnly = true;
+      }
+    } else if (lower === "disable") {
+      if (sess.mode === "priv") {
+        sess.mode = "user";
+        sess.prompt = `${dev}>`;
+        isModeNavOnly = true;
+      }
+    } else if (lower === "configure terminal" || lower === "configure") {
+      if (sess.mode === "priv") {
+        sess.mode = "config";
+        sess.prompt = `${dev}(config)#`;
+        sess.history.push({ type: "out", text: "Enter configuration commands, one per line.  End with CNTL/Z." });
+        isModeNavOnly = true;
+      } else {
+        sess.history.push({ type: "out", cls: "warn", text: "% Invalid input detected at '^' marker. (Enter 'enable' first)" });
+        if (!explicitDevice) renderLab();
+        return;
+      }
+    } else if (lower === "end") {
+      if (sess.mode.startsWith("config")) {
+        sess.mode = "priv";
+        sess.prompt = `${dev}#`;
+        sess.history.push({ type: "out", text: "%SYS-5-CONFIG_I: Configured from console by console" });
+        isModeNavOnly = true;
+      }
+    } else if (lower === "exit") {
+      isModeNavOnly = true;
+      if (sess.mode.startsWith("config-")) {
+        sess.mode = "config";
+        sess.prompt = `${dev}(config)#`;
+      } else if (sess.mode === "config") {
+        sess.mode = "priv";
+        sess.prompt = `${dev}#`;
+        sess.history.push({ type: "out", text: "%SYS-5-CONFIG_I: Configured from console by console" });
+      } else if (sess.mode === "priv") {
+        sess.mode = "user";
+        sess.prompt = `${dev}>`;
+      } else {
+        sess.history.push({ type: "out", text: `${dev} con0 is now available. Press RETURN to get started.` });
+      }
+    } else if (sess.mode.startsWith("config")) {
+      // Submode entry commands from global config or submode jump
+      if (/^interface\s+range\s+/i.test(expanded)) {
+        sess.mode = "config-if";
+        sess.prompt = `${dev}(config-if-range)#`;
+      } else if (/^interface\s+/i.test(expanded)) {
+        sess.mode = "config-if";
+        sess.prompt = `${dev}(config-if)#`;
+      } else if (/^vlan\s+\d+/i.test(expanded)) {
+        sess.mode = "config-vlan";
+        sess.prompt = `${dev}(config-vlan)#`;
+      } else if (/^router\s+ospf/i.test(expanded)) {
+        sess.mode = "config-router";
+        sess.prompt = `${dev}(config-router)#`;
+      } else if (/^ip\s+access-list\s+extended/i.test(expanded)) {
+        sess.mode = "config-acl";
+        sess.prompt = `${dev}(config-ext-nacl)#`;
+      } else if (/^ip\s+access-list\s+/i.test(expanded)) {
+        sess.mode = "config-acl";
+        sess.prompt = `${dev}(config-std-nacl)#`;
+      } else if (/^line\s+/i.test(expanded)) {
+        sess.mode = "config-line";
+        sess.prompt = `${dev}(config-line)#`;
+      } else if (/^ip\s+dhcp\s+pool/i.test(expanded)) {
+        sess.mode = "config-dhcp";
+        sess.prompt = `${dev}(dhcp-config)#`;
+      }
+    }
+
+    // Record applied configuration commands in running-config and silently grade against lab objectives
+    const wasSolved = isLabSolved(ls);
+    if (sess.mode.startsWith("config") && !isModeNavOnly) {
+      sess.appliedConfigs.push(expanded);
+
+      ls.lab.objectives.forEach((obj) => {
+        if ((obj.device || dev) === dev && !ls.completedIds.has(obj.id)) {
+          if (obj.pattern.test(expanded) || obj.pattern.test(cmd)) {
+            ls.completedIds.add(obj.id);
+          }
+        }
+      });
+    }
+
+    // Show DONE banner & celebration ONLY when the ENTIRE lab across all devices is accomplished!
+    if (!wasSolved && isLabSolved(ls)) {
+      ls.skipped = false;
+      const devs = ls.lab.devices || [dev];
+      sess.history.push({
+        type: "out",
+        cls: "success",
+        text: `✓ DONE — LAB ACCOMPLISHED! All scenario requirements verified across ${devs.join(", ")}. Click "Next Lab >" to proceed.`,
+      });
+      if (!explicitDevice) {
+        showToast(`✓ DONE! Lab ${state.currentLabIdx + 1}/6 (${ls.lab.title}) accomplished!`);
       }
     }
 
@@ -1527,12 +1375,12 @@
     document.getElementById("analyticsLabList").innerHTML = state.examLabs
       .map((ls, i) => {
         const done = isLabSolved(ls);
-        const tag = done ? "SOLVED" : ls.skipped ? "SKIPPED" : "IN PROGRESS";
+        const tag = done ? "DONE" : ls.skipped ? "SKIPPED" : "IN PROGRESS";
         return `
         <div class="history-row">
           <div>
             <strong>Lab ${i + 1}/6: ${escapeHtml(ls.lab.title)}</strong>
-            <div class="history-meta">${escapeHtml(ls.lab.passerTag)} &bull; ${ls.completedIds.size}/${ls.lab.objectives.length} tasks</div>
+            <div class="history-meta">${escapeHtml(ls.lab.passerTag)} &bull; Devices: ${escapeHtml((ls.lab.devices || []).join(", "))}</div>
           </div>
           <span class="pass-pill ${done ? "pass" : "fail"}">${tag}</span>
         </div>`;
@@ -1692,11 +1540,17 @@
     if (!ls) return;
     const sols = ls.lab.solutions || {};
     Object.entries(sols).forEach(([devName, cmds]) => {
+      const sess = ls.deviceSessions[devName];
+      if (sess) {
+        if (sess.mode === "user") executeCliCommand("enable", devName);
+        if (sess.mode === "priv") executeCliCommand("configure terminal", devName);
+        else if (sess.mode.startsWith("config-")) executeCliCommand("exit", devName);
+      }
       cmds.forEach((cmd) => executeCliCommand(cmd, devName));
     });
     renderLab();
     renderAnalytics();
-    showToast(`Applied multi-device solution across ${Object.keys(sols).join(", ")} — click each device tab to review its CLI commands.`);
+    showToast(`✓ DONE! Applied multi-device solution across ${Object.keys(sols).join(", ")} — review each device via 'do sh run'.`);
   });
   el.resetLabBtn.addEventListener("click", () => {
     const currentLab = state.examLabs[state.currentLabIdx].lab;

@@ -55,7 +55,7 @@ window.CCNA_LAB_POOL = [
     section: "3.0 IP Connectivity",
     title: "3-Router OSPF DR / BDR / DROTHER Election",
     devices: ["R1", "R2", "R3"],
-    scenario: "Configure all 3 routers on broadcast segment 10.0.12.0/24 (Area 0, Gi0/0): Force R1 to become DR (RID 1.1.1.1, priority 200), R2 to become BDR (RID 2.2.2.2, priority 100), and R3 to remain DROTHER permanently (RID 3.3.3.3, priority 0).",
+    scenario: "Configure all 3 routers on broadcast segment 10.0.12.0/24 (OSPF Process 1, Area 0 on Gi0/0): Configure R1 to win DR election (router-ID 1.1.1.1, interface priority 200), R2 to become BDR (router-ID 2.2.2.2, interface priority 100), and R3 to remain DROTHER permanently (router-ID 3.3.3.3, interface priority 0). Activate OSPF Process 1 Area 0 on Gi0/0 on each router.",
     nodes: [
       { id: "N1", type: "router", label: "R1", sub: "Target DR (.1)", x: 45, y: 48, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "router", label: "R2", sub: "Target BDR (.2)", x: 350, y: 48, status: "blue", configurable: true },
@@ -190,7 +190,7 @@ window.CCNA_LAB_POOL = [
     section: "2.0 Network Access",
     title: "Multi-Switch CDP Hardening & LLDP Interop",
     devices: ["SW1", "SW2"],
-    scenario: "Configure both switches: On SW1, enable LLDP globally, enable LLDP transmit & receive on Gi0/2, and disable CDP on external link Gi0/1. On SW2, enable LLDP globally, enable LLDP transmit & receive on Gi0/2 to peer with SW1, and disable CDP globally ('no cdp run').",
+    scenario: "Configure both switches for discovery protocol hardening and vendor interoperability: On SW1, enable LLDP globally, enable LLDP transmit and receive on Gi0/2, and disable CDP on external interface Gi0/1. On SW2, enable LLDP globally, enable LLDP transmit and receive on Gi0/2 to peer with SW1, and disable CDP globally.",
     nodes: [
       { id: "N1", type: "switch", label: "SW1", sub: "Edge Switch", x: 115, y: 58, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "switch", label: "SW2", sub: "Core Switch", x: 330, y: 58, status: "blue", configurable: true },
@@ -223,7 +223,7 @@ window.CCNA_LAB_POOL = [
     section: "1.0 Network Fundamentals",
     title: "Dual-Stack IPv4 & IPv6 Point-to-Point Link",
     devices: ["R1", "R2"],
-    scenario: "Configure dual-stack routing across R1 and R2 (connected via Gi0/0): Enable 'ipv6 unicast-routing' on BOTH routers. On R1 Gi0/0 assign 10.1.1.1/30, 2001:db8:12::1/64, Link-Local fe80::1, and 'no shutdown'. On R2 Gi0/0 assign 10.1.1.2/30, 2001:db8:12::2/64, Link-Local fe80::2, and 'no shutdown'.",
+    scenario: "Configure dual-stack routing across R1 and R2 (connected via Gi0/0): Enable IPv6 unicast routing on BOTH routers. On R1 Gi0/0 assign IPv4 10.1.1.1/30, global IPv6 2001:db8:12::1/64, link-local fe80::1, and bring the interface up. On R2 Gi0/0 assign IPv4 10.1.1.2/30, global IPv6 2001:db8:12::2/64, link-local fe80::2, and bring the interface up.",
     nodes: [
       { id: "N1", type: "router", label: "R1", sub: ".1.1 / ::1", x: 115, y: 60, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "router", label: "R2", sub: ".1.2 / ::2", x: 330, y: 60, status: "blue", configurable: true },
@@ -288,7 +288,7 @@ window.CCNA_LAB_POOL = [
     section: "4.0 IP Services",
     title: "3-Device Authenticated NTP Master & Clients",
     devices: ["R1", "R2", "SW1"],
-    scenario: "Build a 3-device NTP hierarchy: Configure R1 as authoritative Stratum 2 NTP Master ('ntp master 2') with authentication key 1 (MD5 'CiscoNTP'). Sync both R2 and SW1 to R1 (10.0.0.1) using NTP authentication and trusted key 1.",
+    scenario: "Build a 3-device authenticated NTP hierarchy: Configure R1 as an authoritative Stratum 2 NTP master with NTP authentication enabled, MD5 authentication key 1 (secret CiscoNTP), and key 1 trusted. Synchronize both R2 and SW1 to R1 (10.0.0.1) using NTP authentication with trusted key 1.",
     nodes: [
       { id: "N1", type: "router", label: "R1", sub: "NTP Master .0.1", x: 196, y: 46, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "router", label: "R2", sub: "NTP Client S3", x: 60, y: 168, status: "green", configurable: true },
@@ -387,7 +387,7 @@ window.CCNA_LAB_POOL = [
     section: "3.0 IP Connectivity",
     title: "3-Router Single-Area OSPF & Default Injection",
     devices: ["R1", "R2", "R3"],
-    scenario: "Configure 3 routers in OSPF Process 1 Area 0: On R1 (ISP Edge), enable OSPF on Gi0/0 and inject a default route ('default-information originate'). On R2 (Transit), advertise 10.0.0.0/16 in Area 0. On R3 (Branch), enable OSPF on Gi0/0 and suppress Hellos on LAN Gi0/1 ('passive-interface gigabitethernet 0/1').",
+    scenario: "Configure 3 routers in OSPF Process 1 Area 0: On R1 (ISP Edge), activate OSPF Area 0 on Gi0/0 and originate a default route into OSPF. On R2 (Transit), advertise network 10.0.0.0/16 into Area 0. On R3 (Branch), activate OSPF Area 0 on Gi0/0 and suppress OSPF Hello packets on LAN interface Gi0/1.",
     nodes: [
       { id: "N1", type: "router", label: "R1", sub: "ASBR Edge", x: 55, y: 60, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "router", label: "R2", sub: "Core OSPF", x: 205, y: 60, status: "blue", configurable: true },
@@ -453,7 +453,7 @@ window.CCNA_LAB_POOL = [
     section: "3.0 IP Connectivity",
     title: "Multilayer Switch Inter-VLAN SVI + Upstream Router",
     devices: ["SW1", "R1"],
-    scenario: "Configure Layer 3 switching on SW1 and routing on R1: On SW1, enable 'ip routing', configure SVI Vlan10 (192.168.10.1/24), convert uplink Gi0/1 to routed port ('no switchport', IP 10.0.0.2/30), and add default route via 10.0.0.1. On R1, add a return static route for 192.168.10.0/24 via 10.0.0.2.",
+    scenario: "Configure Layer 3 switching on SW1 and return routing on R1: On SW1, enable IPv4 routing globally, configure SVI Vlan 10 with 192.168.10.1/24 (administratively up), convert uplink Gi0/1 to a Layer 3 routed port with 10.0.0.2/30, and configure a default static route via 10.0.0.1. On R1, configure a static return route for 192.168.10.0/24 via 10.0.0.2.",
     nodes: [
       { id: "N1", type: "pc", label: "PC-V10", sub: "192.168.10.10", x: 45, y: 172, status: "green" },
       { id: "N2", type: "switch", label: "SW1", sub: "L3 Catalyst", x: 155, y: 55, status: "blue", configurable: true, selected: true },
@@ -583,7 +583,7 @@ window.CCNA_LAB_POOL = [
     section: "4.0 IP Services",
     title: "Central IOS DHCP Server + Remote Branch Relay Agent",
     devices: ["R1", "R2"],
-    scenario: "Configure DHCP across 2 routers: On R1 (Central DHCP Server at 10.0.0.1), exclude 192.168.30.1–10 and create pool 'BRANCH_LAN' for 192.168.30.0/24 with default-router 192.168.30.1 and DNS 8.8.8.8. On R2 (Branch Gateway), configure 'ip helper-address 10.0.0.1' on LAN interface Gi0/0.",
+    scenario: "Configure centralized DHCP services across 2 routers: On R1 (Central DHCP Server at 10.0.0.1), exclude addresses 192.168.30.1 through 192.168.30.10 and create DHCP pool BRANCH_LAN for 192.168.30.0/24 with default gateway 192.168.30.1 and DNS server 8.8.8.8. On R2 (Branch Gateway), configure DHCP relay on LAN interface Gi0/0 pointing to 10.0.0.1.",
     nodes: [
       { id: "N1", type: "router", label: "R1", sub: "DHCP Server .0.1", x: 115, y: 58, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "router", label: "R2", sub: "Branch Relay", x: 330, y: 58, status: "blue", configurable: true },
@@ -647,7 +647,7 @@ window.CCNA_LAB_POOL = [
     section: "6.0 Automation and Programmability",
     title: "Multi-Device SSHv2, RESTCONF & NETCONF-YANG Prep",
     devices: ["R1", "SW1"],
-    scenario: "Onboard BOTH R1 and SW1 for Ansible & Catalyst Center automation: On R1, configure domain 'corp.local', SSHv2, HTTPS server ('ip http secure-server'), 'restconf', and 'netconf-yang'. On SW1, configure domain 'corp.local', SSHv2, and restrict VTY 0 15 to SSH ('transport input ssh').",
+    scenario: "Onboard BOTH R1 and SW1 for Ansible & Catalyst Center automation: On R1, configure domain name corp.local, enforce SSH version 2, enable the HTTPS secure web server, and activate both RESTCONF and NETCONF-YANG. On SW1, configure domain name corp.local, enforce SSH version 2, and restrict VTY lines 0 through 15 to SSH-only inbound transport.",
     nodes: [
       { id: "N1", type: "router", label: "R1", sub: "RESTCONF/830", x: 115, y: 58, status: "blue", configurable: true, selected: true },
       { id: "N2", type: "switch", label: "SW1", sub: "Ansible SSHv2", x: 330, y: 58, status: "blue", configurable: true },

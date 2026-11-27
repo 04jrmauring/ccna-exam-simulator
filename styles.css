@@ -762,3 +762,336 @@ code, pre, .mono { font-family: var(--font-mono); }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
 }
+
+/* ============================================================================
+   INTERACTIVE CCNA DRAG-AND-DROP ENGINE
+   ============================================================================ */
+.dd-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: rgba(168, 85, 247, 0.18);
+  color: #d8b4fe;
+  border: 1px solid rgba(192, 132, 252, 0.42);
+}
+
+.q-cell.is-dd {
+  position: relative;
+}
+.q-cell.is-dd::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c084fc;
+}
+
+.dd-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.dd-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(11, 18, 33, 0.72);
+  border: 1px solid var(--border-subtle);
+  font-size: 12.2px;
+  color: var(--text-secondary);
+}
+
+.dd-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dd-progress-pill {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 188, 235, 0.14);
+  color: var(--cisco-cyan);
+  border: 1px solid rgba(0, 188, 235, 0.35);
+}
+
+.dd-progress-pill.complete {
+  background: var(--success-soft);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.dd-reset-btn {
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 11.8px;
+  font-weight: 600;
+  color: #e2e8f0;
+  background: var(--bg-slate);
+  border: 1px solid var(--border-strong);
+  transition: all 0.15s ease;
+}
+.dd-reset-btn:hover:not(:disabled) {
+  border-color: var(--cisco-cyan);
+  color: #fff;
+}
+.dd-reset-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dd-columns {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.92fr) minmax(300px, 1.18fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.dd-col {
+  background: rgba(11, 18, 33, 0.56);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dd-col.drag-over-bank {
+  border-color: var(--cisco-cyan);
+  background: rgba(4, 159, 217, 0.08);
+}
+
+.dd-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dd-bank-list,
+.dd-target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 13px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.94), rgba(21, 33, 56, 0.96));
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.38;
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+}
+
+.dd-item:hover:not(.placed):not(.locked) {
+  border-color: var(--cisco-cyan);
+  background: linear-gradient(180deg, rgba(36, 51, 75, 0.98), rgba(23, 37, 64, 0.98));
+  transform: translateY(-1px);
+}
+
+.dd-item:active:not(.placed):not(.locked) {
+  cursor: grabbing;
+}
+
+.dd-item.dragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
+.dd-item.selected-item {
+  border-color: var(--cisco-cyan);
+  background: linear-gradient(180deg, rgba(4, 159, 217, 0.28), rgba(4, 104, 181, 0.22));
+  box-shadow: 0 0 0 2px rgba(0, 188, 235, 0.35);
+}
+
+.dd-item.placed {
+  opacity: 0.42;
+  cursor: default;
+  border-style: dashed;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.dd-item.locked {
+  cursor: default;
+}
+
+.dd-grip {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+}
+
+.dd-item-label {
+  flex: 1;
+}
+
+.dd-placed-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.dd-target-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 13px;
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dd-target-card.drag-over {
+  border-color: var(--cisco-cyan);
+  background: rgba(4, 159, 217, 0.16);
+  box-shadow: 0 0 0 2px rgba(0, 188, 235, 0.28);
+}
+
+.dd-target-card.ready-to-place {
+  border-color: rgba(0, 188, 235, 0.55);
+  cursor: pointer;
+}
+.dd-target-card.ready-to-place:hover {
+  background: rgba(4, 159, 217, 0.14);
+}
+
+.dd-target-card.dd-correct {
+  border-color: rgba(34, 197, 94, 0.65);
+  background: rgba(34, 197, 94, 0.11);
+}
+
+.dd-target-card.dd-wrong {
+  border-color: rgba(239, 68, 68, 0.65);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dd-target-label {
+  font-size: 12.6px;
+  font-weight: 600;
+  color: #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.dd-dropzone {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1.5px dashed rgba(148, 163, 184, 0.34);
+  background: rgba(7, 13, 25, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.dd-dropzone.has-item {
+  border-style: solid;
+  border-color: rgba(0, 188, 235, 0.45);
+  background: rgba(4, 159, 217, 0.15);
+  padding: 6px 8px 6px 11px;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f8fafc;
+}
+
+.dd-target-card.dd-correct .dd-dropzone.has-item {
+  border-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.dd-target-card.dd-wrong .dd-dropzone.has-item {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.dd-placed-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 12.8px;
+  font-weight: 600;
+  color: #f8fafc;
+  cursor: grab;
+}
+
+.dd-remove-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  flex-shrink: 0;
+}
+.dd-remove-btn:hover {
+  color: #fff;
+  border-color: #f87171;
+  background: rgba(239, 68, 68, 0.28);
+}
+
+.dd-expected-hint {
+  font-size: 11.6px;
+  color: #86efac;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+@media (max-width: 960px) {
+  .dd-columns {
+    grid-template-columns: 1fr;
+  }
+}

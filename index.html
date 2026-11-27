@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CCNA 200-301 — Cisco Packet Tracer Lab &amp; 100Q Exam Simulator</title>
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
   <div class="app-shell">
@@ -86,7 +86,7 @@
         <div class="readiness-card">
           <div class="readiness-header">
             <span>Exam Pool</span>
-            <strong class="text-cisco">1,500 Q / 45 Labs</strong>
+            <strong class="text-cisco">1,548 Q / 45 Labs</strong>
           </div>
           <div class="mini-bar">
             <div class="mini-bar-fill" id="sidebarProgressFill" style="width: 2%"></div>
@@ -361,6 +361,7 @@
               <div class="eyebrow-row">
                 <span class="domain-badge" id="domainBadge">1.0 Network Fundamentals</span>
                 <span class="subtopic-badge" id="subtopicBadge">IPv4 Subnetting</span>
+                <span class="dd-type-badge hidden" id="qTypeBadge">Drag &amp; Drop</span>
                 <span class="flag-badge hidden" id="flaggedBadge">Flagged</span>
               </div>
               <h1 class="exam-title" id="examTitle">CCNA 200-301 Practice Exam — Part 2: Written Q&amp;A (100 Questions)</h1>
@@ -389,6 +390,7 @@
             <div class="drawer-header">
               <div class="drawer-filters" id="gridFilters">
                 <button class="filter-chip active" data-filter="all">All (100)</button>
+                <button class="filter-chip" data-filter="drag-drop" id="ddFilterChip">Drag &amp; Drop</button>
                 <button class="filter-chip" data-filter="unanswered">Unanswered</button>
                 <button class="filter-chip" data-filter="flagged">Flagged</button>
                 <button class="filter-chip" data-filter="1.0">1.0 (20)</button>
@@ -450,7 +452,7 @@
         <div class="page-header-row">
           <div>
             <h1 class="page-h1">CCNA 200-301 Exam Simulator Dashboard</h1>
-            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 45-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,500-question pool).</p>
+            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 45-lab pool) followed by 100 blueprint-weighted CCNA questions — including 12–15 interactive Drag-and-Drop items (from 1,500 MCQs + 48 Drag-and-Drops).</p>
           </div>
           <button class="btn btn-primary" id="dashStartExamBtn">Start Fresh Exam (6 Labs → 100 Qs)</button>
         </div>
@@ -458,8 +460,8 @@
         <div class="kpi-grid">
           <div class="kpi-card">
             <span class="kpi-label">Total Question Pool</span>
-            <strong class="kpi-val text-cisco">1,500</strong>
-            <span class="kpi-sub">100 unique weighted questions per exam</span>
+            <strong class="kpi-val text-cisco">1,548</strong>
+            <span class="kpi-sub">1,500 MCQs + 48 Drag &amp; Drops (12–15/exam)</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Packet Tracer Lab Pool</span>
@@ -727,16 +729,17 @@ line vty 0 15 -&gt; login local | transport input ssh</pre>
     </div>
   </div>
 
-  <!-- Offline Data Pools (1,500 CCNA v1.1 Questions + 45 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
-  <script src="data/ios_cli.js?v=10"></script>
-  <script src="data/questions.js?v=10"></script>
-  <script src="data/questions_vol1.js?v=10"></script>
-  <script src="data/questions_vol2.js?v=10"></script>
-  <script src="data/questions_vol3.js?v=10"></script>
-  <script src="data/questions_vol4.js?v=10"></script>
-  <script src="data/questions_vol5.js?v=10"></script>
-  <script src="data/labs.js?v=10"></script>
-  <script src="data/labs_enterprise.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <!-- Offline Data Pools (1,500 MCQs + 48 Drag-and-Drops + 45 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
+  <script src="data/ios_cli.js?v=11"></script>
+  <script src="data/questions.js?v=11"></script>
+  <script src="data/questions_vol1.js?v=11"></script>
+  <script src="data/questions_vol2.js?v=11"></script>
+  <script src="data/questions_vol3.js?v=11"></script>
+  <script src="data/questions_vol4.js?v=11"></script>
+  <script src="data/questions_vol5.js?v=11"></script>
+  <script src="data/drag_drops.js?v=11"></script>
+  <script src="data/labs.js?v=11"></script>
+  <script src="data/labs_enterprise.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

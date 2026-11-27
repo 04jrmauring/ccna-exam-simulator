@@ -1,9 +1,11 @@
 (() => {
   const QUESTION_POOL = window.CCNA_QUESTION_POOL || [];
+  const DRAG_DROP_POOL = window.CCNA_DRAG_DROP_POOL || [];
   const LAB_POOL = window.CCNA_LAB_POOL || [];
   const BLUEPRINT = window.CCNA_BLUEPRINT || [];
   const HISTORY_KEY = "ccna_200_301_exam_history_v1";
   const SEEN_Q_KEY = "ccna_200_301_seen_questions_v3";
+  const SEEN_DD_KEY = "ccna_200_301_seen_dragdrops_v1";
   const SEEN_LAB_KEY = "ccna_200_301_seen_labs_v3";
 
   function cryptoRandFloat() {
@@ -65,34 +67,68 @@
     return result;
   }
 
-  // Draw 100 weighted questions (20/20/25/10/15/10) with ZERO repeats across up to 10 consecutive exams (1,000 Qs)
+  // Draw 100 weighted questions (20/20/25/10/15/10) including 12-15 Drag-and-Drop items across all 6 domains
   function drawWeighted100Questions() {
     const seenQ = loadIdSet(SEEN_Q_KEY);
+    const seenDD = loadIdSet(SEEN_DD_KEY);
     const drawn = [];
     let deckResetOccurred = false;
 
-    BLUEPRINT.forEach((sec) => {
-      const allInSec = QUESTION_POOL.filter((q) => q.sectionCode === sec.code);
-      let unseen = allInSec.filter((q) => !seenQ.has(q.id));
-      let picked = [];
+    // Base Drag-and-Drop quotas per section = 12, plus 0..3 random bonus slots -> 12 to 15 Drag-and-Drops per exam
+    const ddQuotas = { "1.0": 3, "2.0": 2, "3.0": 3, "4.0": 1, "5.0": 2, "6.0": 1 };
+    const bonusCandidates = shuffleCopy(["2.0", "4.0", "6.0"]);
+    const bonusCount = Math.floor(cryptoRandFloat() * 4); // 0, 1, 2, or 3 -> total 12, 13, 14, or 15
+    for (let i = 0; i < bonusCount; i++) {
+      ddQuotas[bonusCandidates[i]] += 1;
+    }
 
-      if (unseen.length >= sec.examCount) {
-        picked = pickDiverseFromBucket(unseen, sec.examCount);
+    BLUEPRINT.forEach((sec) => {
+      // 1) Draw Drag-and-Drop items for this section
+      const allDdInSec = DRAG_DROP_POOL.filter((d) => d.sectionCode === sec.code);
+      const wantDd = Math.min(ddQuotas[sec.code] || 0, allDdInSec.length, sec.examCount);
+      let pickedDd = [];
+      if (wantDd > 0) {
+        const unseenDd = allDdInSec.filter((d) => !seenDD.has(d.id));
+        if (unseenDd.length >= wantDd) {
+          pickedDd = shuffleCopy(unseenDd).slice(0, wantDd);
+        } else {
+          pickedDd = shuffleCopy(unseenDd);
+          const pickedDdIds = new Set(pickedDd.map((d) => d.id));
+          allDdInSec.forEach((d) => seenDD.delete(d.id));
+          const refillDd = allDdInSec.filter((d) => !pickedDdIds.has(d.id));
+          pickedDd.push(...shuffleCopy(refillDd).slice(0, wantDd - pickedDd.length));
+        }
+        pickedDd.forEach((d) => seenDD.add(d.id));
+        pickedDd = pickedDd.map((d) => ({
+          ...d,
+          type: "drag-drop",
+          shuffledItems: shuffleCopy(d.items),
+        }));
+      }
+
+      // 2) Fill remaining section slots with diverse unseen Multiple-Choice questions
+      const wantMcq = sec.examCount - pickedDd.length;
+      const allInSec = QUESTION_POOL.filter((q) => q.sectionCode === sec.code);
+      const unseen = allInSec.filter((q) => !seenQ.has(q.id));
+      let pickedMcq = [];
+
+      if (unseen.length >= wantMcq) {
+        pickedMcq = pickDiverseFromBucket(unseen, wantMcq);
       } else {
-        // Take all remaining unseen questions in this section, then cycle fresh
-        picked = shuffleCopy(unseen);
-        const pickedIds = new Set(picked.map((q) => q.id));
+        pickedMcq = shuffleCopy(unseen);
+        const pickedIds = new Set(pickedMcq.map((q) => q.id));
         allInSec.forEach((q) => seenQ.delete(q.id));
         deckResetOccurred = true;
         const refillPool = allInSec.filter((q) => !pickedIds.has(q.id));
-        picked.push(...pickDiverseFromBucket(refillPool, sec.examCount - picked.length));
+        pickedMcq.push(...pickDiverseFromBucket(refillPool, wantMcq - pickedMcq.length));
       }
 
-      picked.forEach((q) => seenQ.add(q.id));
-      drawn.push(...picked);
+      pickedMcq.forEach((q) => seenQ.add(q.id));
+      drawn.push(...pickedDd, ...pickedMcq);
     });
 
     saveIdSet(SEEN_Q_KEY, seenQ);
+    saveIdSet(SEEN_DD_KEY, seenDD);
     if (deckResetOccurred) {
       showToast(`You completed a full ${QUESTION_POOL.length.toLocaleString()}-question cycle! Reshuffled the deck for fresh exams.`);
     }
@@ -132,12 +168,14 @@
 
   function updateUnseenDeckLabel() {
     const seenQ = loadIdSet(SEEN_Q_KEY);
+    const seenDD = loadIdSet(SEEN_DD_KEY);
     const seenL = loadIdSet(SEEN_LAB_KEY);
     const remQ = Math.max(0, QUESTION_POOL.length - seenQ.size);
+    const remDD = Math.max(0, DRAG_DROP_POOL.length - seenDD.size);
     const remL = Math.max(0, LAB_POOL.length - seenL.size);
     const elDeck = document.getElementById("unseenDeckStatus");
     if (elDeck) {
-      elDeck.textContent = `${remQ} / ${QUESTION_POOL.length} unseen questions • ${remL} / ${LAB_POOL.length} unseen labs remaining before deck reshuffle.`;
+      elDeck.textContent = `${remQ} / ${QUESTION_POOL.length} unseen MCQs • ${remDD} / ${DRAG_DROP_POOL.length} unseen Drag & Drops • ${remL} / ${LAB_POOL.length} unseen labs remaining.`;
     }
   }
 
@@ -232,6 +270,7 @@
     labCatalogFilter: "all",
     ptTool: "select", // "select" | "pdu"
     ptDeviceTab: "cli", // "cli" | "config" | "physical" | "desktop"
+    ddSelectedItemId: null,
   };
 
   const el = {
@@ -281,7 +320,9 @@
     examTitle: document.getElementById("examTitle"),
     domainBadge: document.getElementById("domainBadge"),
     subtopicBadge: document.getElementById("subtopicBadge"),
+    qTypeBadge: document.getElementById("qTypeBadge"),
     flaggedBadge: document.getElementById("flaggedBadge"),
+    ddFilterChip: document.getElementById("ddFilterChip"),
     questionCounter: document.getElementById("questionCounter"),
     progressStats: document.getElementById("progressStats"),
     progressFill: document.getElementById("progressFill"),
@@ -334,6 +375,43 @@
     return ls.completedIds.size === ls.lab.objectives.length;
   }
 
+  function isDragDropSlotCorrect(target, placedItemId) {
+    if (!placedItemId) return false;
+    if (Array.isArray(target.accepts)) return target.accepts.includes(placedItemId);
+    return target.accepts === placedItemId;
+  }
+
+  function isQuestionAnswered(q) {
+    if (!q) return false;
+    const ans = state.answers[q.examNumber];
+    if (q.type === "drag-drop") {
+      if (!ans || typeof ans !== "object") return false;
+      return q.targets.every((t) => Boolean(ans[t.id]));
+    }
+    return Boolean(ans);
+  }
+
+  function isQuestionCorrect(q) {
+    if (!q) return false;
+    const ans = state.answers[q.examNumber];
+    if (q.type === "drag-drop") {
+      if (!ans || typeof ans !== "object") return false;
+      const used = new Set();
+      for (const t of q.targets) {
+        const placed = ans[t.id];
+        if (!placed || used.has(placed)) return false;
+        used.add(placed);
+        if (!isDragDropSlotCorrect(t, placed)) return false;
+      }
+      return true;
+    }
+    return ans === q.correct;
+  }
+
+  function answeredQuestionsCount() {
+    return state.examQuestions.filter(isQuestionAnswered).length;
+  }
+
   function solvedLabsCount() {
     return state.examLabs.filter(isLabSolved).length;
   }
@@ -357,7 +435,7 @@
 
   function updatePhaseStepper() {
     const labsDone = solvedLabsCount();
-    const qDone = Object.keys(state.answers).length;
+    const qDone = answeredQuestionsCount();
     const labsAllDone = labsDone === state.examLabs.length;
 
     el.stepPhaseLabs.classList.toggle("active", state.examPhase === "labs");
@@ -400,6 +478,12 @@
     state.attemptNumber = loadHistory().length + 1;
     state.ptTool = "select";
     state.ptDeviceTab = "cli";
+    state.ddSelectedItemId = null;
+
+    const ddInExam = state.examQuestions.filter((q) => q.type === "drag-drop").length;
+    if (el.ddFilterChip) {
+      el.ddFilterChip.textContent = `Drag & Drop (${ddInExam})`;
+    }
 
     el.examTitle.textContent = `CCNA 200-301 Practice Exam #${state.attemptNumber} — Part 2: Written Q&A`;
     el.timerDisplay.textContent = formatTime(state.secondsRemaining);
@@ -413,12 +497,12 @@
     switchView("mock-exams");
     if (!silent) {
       const rem = Math.max(0, QUESTION_POOL.length - loadIdSet(SEEN_Q_KEY).size);
-      showToast(`Fresh exam loaded: 6 labs + 100 brand-new questions (${rem} unseen left in ${QUESTION_POOL.length.toLocaleString()}-Q pool).`);
+      showToast(`Fresh exam loaded: 6 labs + 100 questions (${ddInExam} Drag & Drop, ${rem} unseen MCQs left).`);
     }
   }
 
   function updateProgressIndicators() {
-    const answeredCount = Object.keys(state.answers).length;
+    const answeredCount = answeredQuestionsCount();
     const labsDone = solvedLabsCount();
     const totalTasks = state.examQuestions.length + state.examLabs.length;
     const pct = totalTasks > 0 ? Math.round(((answeredCount + labsDone) / totalTasks) * 100) : 0;
@@ -1131,66 +1215,297 @@
   }
 
   // ============================================================================
-  // PHASE 2: 100-QUESTION Q&A RENDERER
+  // PHASE 2: 100-QUESTION Q&A RENDERER (MCQ + INTERACTIVE DRAG-AND-DROP)
   // ============================================================================
+  function placeDragDropItem(q, itemId, targetId) {
+    if (state.submitted || !itemId || !targetId) return;
+    const current = { ...(state.answers[q.examNumber] || {}) };
+    // Find if itemId was already placed in another target (for move/swap)
+    let sourceTargetId = null;
+    Object.keys(current).forEach((tId) => {
+      if (current[tId] === itemId) sourceTargetId = tId;
+    });
+    const displacedItemId = current[targetId] || null;
+    if (sourceTargetId && sourceTargetId !== targetId) {
+      if (displacedItemId) current[sourceTargetId] = displacedItemId;
+      else delete current[sourceTargetId];
+    }
+    current[targetId] = itemId;
+    state.answers[q.examNumber] = current;
+    state.ddSelectedItemId = null;
+    renderQuestion();
+  }
+
+  function removeDragDropTarget(q, targetId) {
+    if (state.submitted || !targetId) return;
+    const current = { ...(state.answers[q.examNumber] || {}) };
+    delete current[targetId];
+    if (Object.keys(current).length === 0) delete state.answers[q.examNumber];
+    else state.answers[q.examNumber] = current;
+    state.ddSelectedItemId = null;
+    renderQuestion();
+  }
+
+  function renderDragDropBoard(q, canReveal) {
+    const placements = state.answers[q.examNumber] && typeof state.answers[q.examNumber] === "object"
+      ? state.answers[q.examNumber]
+      : {};
+    const items = q.shuffledItems || q.items;
+    const itemById = new Map(q.items.map((it) => [it.id, it]));
+    const placedIds = new Set(Object.values(placements).filter(Boolean));
+    const placedCount = q.targets.filter((t) => Boolean(placements[t.id])).length;
+
+    const wrap = document.createElement("div");
+    wrap.className = "dd-workspace";
+
+    // Top toolbar
+    const toolbar = document.createElement("div");
+    toolbar.className = "dd-toolbar";
+    toolbar.innerHTML = `
+      <span>${q.mode === "order" ? "Drag items into the exact sequence (or click an item, then click a slot)." : "Drag items from the left bank onto matching targets (or click an item, then click a slot)."}</span>
+      <div class="dd-toolbar-right">
+        <span class="dd-progress-pill${placedCount === q.targets.length ? " complete" : ""}">${placedCount} / ${q.targets.length} Placed</span>
+        <button type="button" class="dd-reset-btn" ${state.submitted || placedCount === 0 ? "disabled" : ""}>Reset Slots</button>
+      </div>
+    `;
+    toolbar.querySelector(".dd-reset-btn").addEventListener("click", () => {
+      if (state.submitted) return;
+      delete state.answers[q.examNumber];
+      state.ddSelectedItemId = null;
+      renderQuestion();
+    });
+    wrap.appendChild(toolbar);
+
+    // 2-Column Board
+    const cols = document.createElement("div");
+    cols.className = "dd-columns";
+
+    // Left Column: Source Bank
+    const leftCol = document.createElement("div");
+    leftCol.className = "dd-col";
+    leftCol.innerHTML = `<div class="dd-col-header"><span>Source Options (${items.length})</span><span>Drag or Click</span></div>`;
+    const bankList = document.createElement("div");
+    bankList.className = "dd-bank-list";
+
+    // Allow dropping a placed target chip back onto the Left Bank to unplace it
+    leftCol.addEventListener("dragover", (e) => {
+      if (state.submitted) return;
+      e.preventDefault();
+      leftCol.classList.add("drag-over-bank");
+    });
+    leftCol.addEventListener("dragleave", () => leftCol.classList.remove("drag-over-bank"));
+    leftCol.addEventListener("drop", (e) => {
+      e.preventDefault();
+      leftCol.classList.remove("drag-over-bank");
+      if (state.submitted) return;
+      const fromTarget = e.dataTransfer.getData("text/x-dd-from-target");
+      if (fromTarget) removeDragDropTarget(q, fromTarget);
+    });
+
+    items.forEach((item) => {
+      const isPlaced = placedIds.has(item.id);
+      const isSelected = state.ddSelectedItemId === item.id;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `dd-item${isPlaced ? " placed" : ""}${isSelected ? " selected-item" : ""}${state.submitted ? " locked" : ""}`;
+      btn.draggable = !isPlaced && !state.submitted;
+      btn.innerHTML = `
+        <span class="dd-grip" aria-hidden="true">⋮⋮</span>
+        <span class="dd-item-label">${escapeHtml(item.label)}</span>
+        ${isPlaced ? '<span class="dd-placed-tag">Placed</span>' : ""}
+      `;
+      if (!isPlaced && !state.submitted) {
+        btn.addEventListener("dragstart", (e) => {
+          btn.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", item.id);
+          e.dataTransfer.setData("text/x-dd-item", item.id);
+        });
+        btn.addEventListener("dragend", () => btn.classList.remove("dragging"));
+        btn.addEventListener("click", () => {
+          state.ddSelectedItemId = state.ddSelectedItemId === item.id ? null : item.id;
+          renderQuestion();
+        });
+      }
+      bankList.appendChild(btn);
+    });
+    leftCol.appendChild(bankList);
+    cols.appendChild(leftCol);
+
+    // Right Column: Target Drop Slots
+    const rightCol = document.createElement("div");
+    rightCol.className = "dd-col";
+    rightCol.innerHTML = `<div class="dd-col-header"><span>Target Slots (${q.targets.length})</span><span>Drop Here</span></div>`;
+    const targetList = document.createElement("div");
+    targetList.className = "dd-target-list";
+
+    q.targets.forEach((target) => {
+      const placedItemId = placements[target.id] || null;
+      const placedItem = placedItemId ? itemById.get(placedItemId) : null;
+      const slotCorrect = isDragDropSlotCorrect(target, placedItemId);
+
+      const card = document.createElement("div");
+      card.className = "dd-target-card";
+      if (!state.submitted && state.ddSelectedItemId) card.classList.add("ready-to-place");
+      if (canReveal) card.classList.add(slotCorrect ? "dd-correct" : "dd-wrong");
+
+      const lbl = document.createElement("div");
+      lbl.className = "dd-target-label";
+      let statusBadge = "";
+      if (canReveal) {
+        statusBadge = slotCorrect
+          ? '<span style="color:#86efac;font-size:11px;">✓ Correct</span>'
+          : '<span style="color:#fca5a5;font-size:11px;">✕ Incorrect</span>';
+      }
+      lbl.innerHTML = `<span>${escapeHtml(target.label)}</span>${statusBadge}`;
+      card.appendChild(lbl);
+
+      const zone = document.createElement("div");
+      zone.className = `dd-dropzone${placedItem ? " has-item" : ""}`;
+      if (placedItem) {
+        const chip = document.createElement("div");
+        chip.className = "dd-placed-chip";
+        chip.draggable = !state.submitted;
+        chip.innerHTML = `<span class="dd-grip" aria-hidden="true">⋮⋮</span><span>${escapeHtml(placedItem.label)}</span>`;
+        if (!state.submitted) {
+          chip.addEventListener("dragstart", (e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", placedItem.id);
+            e.dataTransfer.setData("text/x-dd-item", placedItem.id);
+            e.dataTransfer.setData("text/x-dd-from-target", target.id);
+          });
+        }
+        zone.appendChild(chip);
+
+        if (!state.submitted) {
+          const rmBtn = document.createElement("button");
+          rmBtn.type = "button";
+          rmBtn.className = "dd-remove-btn";
+          rmBtn.title = "Return item to source bank";
+          rmBtn.textContent = "×";
+          rmBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeDragDropTarget(q, target.id);
+          });
+          zone.appendChild(rmBtn);
+        }
+      } else {
+        zone.textContent = state.ddSelectedItemId && !state.submitted
+          ? "Click here to place selected item"
+          : "Drop item here";
+      }
+      card.appendChild(zone);
+
+      if (canReveal && !slotCorrect) {
+        const expectedIds = Array.isArray(target.accepts) ? target.accepts : [target.accepts];
+        const expectedLabels = expectedIds
+          .map((id) => itemById.get(id)?.label)
+          .filter(Boolean)
+          .join("  OR  ");
+        const hint = document.createElement("div");
+        hint.className = "dd-expected-hint";
+        hint.innerHTML = `<strong>Expected:</strong> ${escapeHtml(expectedLabels)}`;
+        card.appendChild(hint);
+      }
+
+      if (!state.submitted) {
+        card.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          card.classList.add("drag-over");
+        });
+        card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
+        card.addEventListener("drop", (e) => {
+          e.preventDefault();
+          card.classList.remove("drag-over");
+          const draggedId = e.dataTransfer.getData("text/x-dd-item") || e.dataTransfer.getData("text/plain");
+          if (draggedId && itemById.has(draggedId)) {
+            placeDragDropItem(q, draggedId, target.id);
+          }
+        });
+        card.addEventListener("click", () => {
+          if (state.ddSelectedItemId) {
+            placeDragDropItem(q, state.ddSelectedItemId, target.id);
+          }
+        });
+      }
+
+      targetList.appendChild(card);
+    });
+
+    rightCol.appendChild(targetList);
+    cols.appendChild(rightCol);
+    wrap.appendChild(cols);
+    return wrap;
+  }
+
   function renderQuestion() {
     const q = state.examQuestions[state.currentQIdx];
     if (!q) return;
 
-    const selectedKey = state.answers[q.examNumber] || null;
+    const isDragDrop = q.type === "drag-drop";
+    const selectedKey = !isDragDrop ? (state.answers[q.examNumber] || null) : null;
     const isFlagged = state.flagged.has(q.examNumber);
-    const answeredTotal = Object.keys(state.answers).length;
+    const answeredTotal = answeredQuestionsCount();
     const pctPos = Math.round(((state.currentQIdx + 1) / state.examQuestions.length) * 100);
 
     el.domainBadge.textContent = q.section;
     el.subtopicBadge.textContent = q.subtopic;
+    if (el.qTypeBadge) el.qTypeBadge.classList.toggle("hidden", !isDragDrop);
     el.flaggedBadge.classList.toggle("hidden", !isFlagged);
     el.questionCounter.textContent = `Question ${q.examNumber} of ${state.examQuestions.length}`;
     el.progressStats.textContent = `${answeredTotal} Answered • ${state.flagged.size} Flagged`;
     el.progressFill.style.width = `${pctPos}%`;
 
     el.qBadge.textContent = `Q${q.examNumber}`;
-    el.qPoolId.textContent = `Pool ID: ${q.id} • Blueprint Section ${q.sectionCode}`;
+    el.qPoolId.textContent = `Pool ID: ${q.id} • Blueprint Section ${q.sectionCode}${isDragDrop ? " • Interactive Drag & Drop" : ""}`;
     el.questionStem.textContent = q.stem;
 
     const canReveal = state.submitted || (state.studyMode && state.showExplanation);
 
     el.optionsList.innerHTML = "";
-    q.options.forEach((opt) => {
-      const isSelected = selectedKey === opt.key;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      let cls = "option-card";
-      if (isSelected) cls += " selected";
-      if (canReveal && opt.key === q.correct) cls += " correct-reveal";
-      else if (canReveal && isSelected && opt.key !== q.correct) cls += " wrong-reveal";
+    if (isDragDrop) {
+      el.optionsList.setAttribute("role", "region");
+      el.optionsList.setAttribute("aria-label", "Interactive drag and drop matching area");
+      el.optionsList.appendChild(renderDragDropBoard(q, canReveal));
+    } else {
+      el.optionsList.setAttribute("role", "radiogroup");
+      el.optionsList.setAttribute("aria-label", "Answer choices");
+      q.options.forEach((opt) => {
+        const isSelected = selectedKey === opt.key;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        let cls = "option-card";
+        if (isSelected) cls += " selected";
+        if (canReveal && opt.key === q.correct) cls += " correct-reveal";
+        else if (canReveal && isSelected && opt.key !== q.correct) cls += " wrong-reveal";
 
-      btn.className = cls;
-      btn.setAttribute("role", "radio");
-      btn.setAttribute("aria-checked", String(isSelected));
+        btn.className = cls;
+        btn.setAttribute("role", "radio");
+        btn.setAttribute("aria-checked", String(isSelected));
 
-      let tagHtml = "";
-      if (canReveal && opt.key === q.correct) {
-        tagHtml = '<span class="option-selected-tag" style="color:#86efac;background:rgba(34,197,94,0.2)">Correct</span>';
-      } else if (canReveal && isSelected && opt.key !== q.correct) {
-        tagHtml = '<span class="option-selected-tag" style="color:#fca5a5;background:rgba(239,68,68,0.2)">Your Pick</span>';
-      } else if (isSelected) {
-        tagHtml = '<span class="option-selected-tag">Selected</span>';
-      }
+        let tagHtml = "";
+        if (canReveal && opt.key === q.correct) {
+          tagHtml = '<span class="option-selected-tag" style="color:#86efac;background:rgba(34,197,94,0.2)">Correct</span>';
+        } else if (canReveal && isSelected && opt.key !== q.correct) {
+          tagHtml = '<span class="option-selected-tag" style="color:#fca5a5;background:rgba(239,68,68,0.2)">Your Pick</span>';
+        } else if (isSelected) {
+          tagHtml = '<span class="option-selected-tag">Selected</span>';
+        }
 
-      btn.innerHTML = `
-        <span class="radio-outer"><span class="radio-inner"></span></span>
-        <span class="option-letter">${opt.key}.</span>
-        <span class="option-text">${escapeHtml(opt.text)}</span>
-        ${tagHtml}
-      `;
-      btn.addEventListener("click", () => {
-        if (state.submitted) return;
-        state.answers[q.examNumber] = opt.key;
-        renderQuestion();
+        btn.innerHTML = `
+          <span class="radio-outer"><span class="radio-inner"></span></span>
+          <span class="option-letter">${opt.key}.</span>
+          <span class="option-text">${escapeHtml(opt.text)}</span>
+          ${tagHtml}
+        `;
+        btn.addEventListener("click", () => {
+          if (state.submitted) return;
+          state.answers[q.examNumber] = opt.key;
+          renderQuestion();
+        });
+        el.optionsList.appendChild(btn);
       });
-      el.optionsList.appendChild(btn);
-    });
+    }
 
     el.reviewBtn.classList.toggle("active", isFlagged);
     el.reviewBtn.querySelector("span").textContent = isFlagged ? "Flagged for Review" : "Mark for Review";
@@ -1201,7 +1516,11 @@
     el.explainToggle.classList.toggle("hidden", !allowExplainBtn);
     const shouldShowExp = (state.submitted || state.showExplanation) && allowExplainBtn;
     el.explanationBox.classList.toggle("hidden", !shouldShowExp);
-    el.explanationBox.innerHTML = `<strong>Correct Answer: ${q.correct}</strong> &mdash; ${escapeHtml(q.explanation)}`;
+    if (isDragDrop) {
+      el.explanationBox.innerHTML = `<strong>Drag &amp; Drop Explanation:</strong> ${escapeHtml(q.explanation)}`;
+    } else {
+      el.explanationBox.innerHTML = `<strong>Correct Answer: ${q.correct}</strong> &mdash; ${escapeHtml(q.explanation)}`;
+    }
     el.explainToggle.querySelector("span").textContent = shouldShowExp ? "Hide Answer Explanation" : "Show Answer Explanation";
 
     renderQuestionGrid();
@@ -1212,9 +1531,11 @@
     const activeNum = state.examQuestions[state.currentQIdx]?.examNumber;
     el.questionGridCells.innerHTML = "";
     state.examQuestions.forEach((q, idx) => {
-      const answered = Boolean(state.answers[q.examNumber]);
+      const answered = isQuestionAnswered(q);
       const flagged = state.flagged.has(q.examNumber);
+      const isDd = q.type === "drag-drop";
 
+      if (state.gridFilter === "drag-drop" && !isDd) return;
       if (state.gridFilter === "unanswered" && answered) return;
       if (state.gridFilter === "flagged" && !flagged) return;
       if (/^\d\.0$/.test(state.gridFilter) && q.sectionCode !== state.gridFilter) return;
@@ -1222,18 +1543,20 @@
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = "q-cell";
+      if (isDd) cell.classList.add("is-dd");
       if (answered) cell.classList.add("answered");
       if (flagged) cell.classList.add("flagged");
-      if (state.submitted && state.answers[q.examNumber] !== q.correct) {
+      if (state.submitted && !isQuestionCorrect(q)) {
         cell.classList.remove("answered");
         cell.classList.add("wrong-graded");
       }
       if (q.examNumber === activeNum) cell.classList.add("current");
       cell.textContent = q.examNumber;
-      cell.title = `Q${q.examNumber} — ${q.section} (${q.subtopic})`;
+      cell.title = `Q${q.examNumber}${isDd ? " [Drag & Drop]" : ""} — ${q.section} (${q.subtopic})`;
       cell.addEventListener("click", () => {
         state.currentQIdx = idx;
         state.showExplanation = false;
+        state.ddSelectedItemId = null;
         renderQuestion();
       });
       el.questionGridCells.appendChild(cell);
@@ -1253,10 +1576,13 @@
     let correctMcq = 0;
     const sectionBreakdown = BLUEPRINT.map((bp) => {
       const qs = state.examQuestions.filter((q) => q.sectionCode === bp.code);
-      const right = qs.filter((q) => state.answers[q.examNumber] === q.correct).length;
+      const right = qs.filter(isQuestionCorrect).length;
       correctMcq += right;
       return { ...bp, total: qs.length, correct: right, pct: qs.length ? Math.round((right / qs.length) * 100) : 0 };
     });
+
+    const ddQs = state.examQuestions.filter((q) => q.type === "drag-drop");
+    const ddCorrect = ddQs.filter(isQuestionCorrect).length;
 
     const labsSolved = solvedLabsCount();
     const labsTotal = state.examLabs.length;
@@ -1308,6 +1634,7 @@
         <div class="score-hero-item">
           <span>Written Q&amp;A (100 Qs)</span>
           <strong class="text-cisco">${correctMcq} / 100</strong>
+          <span style="margin-top:2px;">Drag &amp; Drop: ${ddCorrect} / ${ddQs.length}</span>
         </div>
       </div>
       <div>
@@ -1413,8 +1740,8 @@
   function renderAnalytics() {
     document.getElementById("analyticsSectionBars").innerHTML = BLUEPRINT.map((bp) => {
       const qs = state.examQuestions.filter((q) => q.sectionCode === bp.code);
-      const answered = qs.filter((q) => state.answers[q.examNumber]).length;
-      const correct = qs.filter((q) => state.answers[q.examNumber] === q.correct).length;
+      const answered = qs.filter(isQuestionAnswered).length;
+      const correct = qs.filter(isQuestionCorrect).length;
       const acc = answered > 0 ? Math.round((correct / answered) * 100) : 0;
       const fillPct = state.submitted || state.studyMode ? acc : Math.round((answered / qs.length) * 100);
       const label = state.submitted || state.studyMode
@@ -1623,6 +1950,7 @@
     if (state.currentQIdx > 0) {
       state.currentQIdx--;
       state.showExplanation = false;
+      state.ddSelectedItemId = null;
       renderQuestion();
     }
   });
@@ -1630,6 +1958,7 @@
     if (state.currentQIdx < state.examQuestions.length - 1) {
       state.currentQIdx++;
       state.showExplanation = false;
+      state.ddSelectedItemId = null;
       renderQuestion();
     }
   });
@@ -1717,9 +2046,10 @@
 
   document.getElementById("resetDeckBtn").addEventListener("click", () => {
     localStorage.removeItem(SEEN_Q_KEY);
+    localStorage.removeItem(SEEN_DD_KEY);
     localStorage.removeItem(SEEN_LAB_KEY);
     updateUnseenDeckLabel();
-    showToast(`Unseen ${QUESTION_POOL.length.toLocaleString()}-question & ${LAB_POOL.length}-lab deck reset! Click 'New Exam' for a fresh draw.`);
+    showToast(`Unseen ${QUESTION_POOL.length.toLocaleString()}-MCQ, ${DRAG_DROP_POOL.length}-Drag & Drop & ${LAB_POOL.length}-lab deck reset! Click 'New Exam' for a fresh draw.`);
   });
 
   // Boot Exam -> Part 1: Lab 1 of 6 (Cisco Packet Tracer)

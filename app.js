@@ -94,7 +94,7 @@
 
     saveIdSet(SEEN_Q_KEY, seenQ);
     if (deckResetOccurred) {
-      showToast("You completed a full 1,000-question cycle! Reshuffled the deck for fresh exams.");
+      showToast(`You completed a full ${QUESTION_POOL.length.toLocaleString()}-question cycle! Reshuffled the deck for fresh exams.`);
     }
     return shuffleCopy(drawn).map((q, index) => ({ ...q, examNumber: index + 1 }));
   }
@@ -413,7 +413,7 @@
     switchView("mock-exams");
     if (!silent) {
       const rem = Math.max(0, QUESTION_POOL.length - loadIdSet(SEEN_Q_KEY).size);
-      showToast(`Fresh exam loaded: 6 labs + 100 brand-new questions (${rem} unseen left in 1,000-Q pool).`);
+      showToast(`Fresh exam loaded: 6 labs + 100 brand-new questions (${rem} unseen left in ${QUESTION_POOL.length.toLocaleString()}-Q pool).`);
     }
   }
 
@@ -1718,7 +1718,7 @@
     localStorage.removeItem(SEEN_Q_KEY);
     localStorage.removeItem(SEEN_LAB_KEY);
     updateUnseenDeckLabel();
-    showToast("Unseen 1,000-question & 20-lab deck reset! Click 'New Exam' for a fresh draw.");
+    showToast(`Unseen ${QUESTION_POOL.length.toLocaleString()}-question & ${LAB_POOL.length}-lab deck reset! Click 'New Exam' for a fresh draw.`);
   });
 
   // Boot Exam -> Part 1: Lab 1 of 6 (Cisco Packet Tracer)

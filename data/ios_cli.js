@@ -18,6 +18,7 @@
         dhcp: { desc: "DHCP information", sub: { snooping: { desc: "DHCP snooping status", sub: { binding: { desc: "DHCP snooping bindings", cr: true } }, cr: true }, binding: { desc: "DHCP server address bindings", cr: true }, pool: { desc: "DHCP pool information", cr: true } } },
         arp: { desc: "IP ARP table / inspection", sub: { inspection: { desc: "Dynamic ARP Inspection status", sub: { interfaces: { desc: "DAI interface trust states", cr: true }, vlan: { desc: "DAI VLAN status <vlan-id>", cr: true } }, cr: true } }, cr: true },
         "access-lists": { desc: "List IP access lists", cr: true },
+        sockets: { desc: "Open IP sockets (TCP/UDP listening ports)", cr: true },
       },
     },
     ipv6: {
@@ -48,12 +49,16 @@
     "mac": { desc: "MAC configuration", sub: { "address-table": { desc: "MAC forwarding table", cr: true } } },
     logging: { desc: "Show the contents of logging buffers", cr: true },
     clock: { desc: "Display the system clock", cr: true },
+    controllers: { desc: "Interface controller & transceiver status", cr: true },
+    crypto: { desc: "Encryption module status", sub: { isakmp: { desc: "IKE/ISAKMP status", sub: { sa: { desc: "Show all current IKE SAs", cr: true } } }, ipsec: { desc: "IPsec status", sub: { sa: { desc: "Show IPsec SAs", cr: true } } } } },
   };
 
   const ACL_PORT_SUB = {
-    eq: { desc: "Match only packets on a given port number", sub: { "<port>": { desc: "Port number or keyword (80, www, 443, 22, 23, 53)", cr: true } } },
+    eq: { desc: "Match only packets on a given port number", sub: { "<port>": { desc: "Port number or keyword (80, www, 443, 22, 23, 53, 67, 69, 161)", cr: true } } },
     neq: { desc: "Match only packets not on a given port", sub: { "<port>": { desc: "Port number", cr: true } } },
-    range: { desc: "Match packets in a range of ports", sub: { "<start-port>": { desc: "Starting port number", cr: true } } },
+    range: { desc: "Match packets in a range of ports", sub: { "<start-port>": { desc: "Starting port number", sub: { "<end-port>": { desc: "Ending port number", cr: true } } } } },
+    echo: { desc: "ICMP Echo Request (ping)", cr: true },
+    "echo-reply": { desc: "ICMP Echo Reply", cr: true },
   };
 
   const ACL_DST_SUB = {
@@ -102,6 +107,7 @@
     "port-channel": { desc: "Ethernet Channel of interfaces", sub: { "<1-64>": { desc: "Port-channel interface number", cr: true } } },
     vlan: { desc: "Catalyst Vlans (SVI)", sub: { "<1-4094>": { desc: "VLAN interface number", cr: true } } },
     loopback: { desc: "Loopback interface", sub: { "<0-2147483647>": { desc: "Loopback interface number", cr: true } } },
+    tunnel: { desc: "Tunnel interface (GRE/IPsec)", sub: { "<0-2147483647>": { desc: "Tunnel interface number (e.g. 0)", cr: true } } },
   };
 
   const IOS_TREES = {
@@ -161,7 +167,7 @@
       do: { desc: "To run exec commands in config mode", sub: DO_SUB },
       enable: { desc: "Modify enable password parameters", sub: { secret: { desc: "Assign the secret password", sub: { "<password>": { desc: "Cleartext secret", cr: true } } } } },
       end: { desc: "Exit from configure mode to Privileged EXEC", cr: true },
-      errdisable: { desc: "Error disable", sub: { recovery: { desc: "Error disable recovery", sub: { cause: { desc: "Enable recovery for specific cause", sub: { "psecure-violation": { desc: "Port security violation", cr: true }, bpduguard: { desc: "BPDU Guard violation", cr: true } } } } } } },
+      errdisable: { desc: "Error disable", sub: { recovery: { desc: "Error disable recovery", sub: { cause: { desc: "Enable recovery for specific cause", sub: { all: { desc: "Enable recovery for all causes", cr: true }, "psecure-violation": { desc: "Port security violation", cr: true }, bpduguard: { desc: "BPDU Guard violation", cr: true }, "gbic-invalid": { desc: "Invalid SFP/GBIC transceiver", cr: true } } } } } } },
       exit: { desc: "Exit from configure mode", cr: true },
       hostname: { desc: "Set system's network name", sub: { "<name>": { desc: "System host name", cr: true } } },
       interface: {
@@ -256,6 +262,7 @@
                   "<mask>": {
                     desc: "Destination subnet mask (e.g. 0.0.0.0 or 255.255.255.0)",
                     sub: {
+                      ...IFACE_TYPE_SUB,
                       "<next-hop>": { desc: "Forwarding router's IP address", sub: { "<1-255>": { desc: "Administrative Distance (e.g. 5 for floating static)", cr: true } }, cr: true },
                     },
                   },
@@ -284,6 +291,103 @@
       lldp: { desc: "Global LLDP configuration subcommands", sub: { run: { desc: "Enable LLDP globally", cr: true }, timer: { desc: "Specify LLDP transmit timer", sub: { "<5-65534>": { desc: "Seconds", cr: true } } }, holdtime: { desc: "Specify LLDP holdtime", sub: { "<0-65535>": { desc: "Seconds", cr: true } } }, reinit: { desc: "Delay before LLDP re-initialization", sub: { "<2-5>": { desc: "Seconds", cr: true } } } } },
       logging: { desc: "Modify message logging facilities", sub: { host: { desc: "Set syslog server IP address", sub: { "<ip>": { desc: "Syslog server IP", cr: true } } }, trap: { desc: "Set syslog server logging level", sub: { "<level>": { desc: "0-7 or keyword (warnings, informational, etc.)", cr: true } } }, buffered: { desc: "Set buffered logging", cr: true } } },
       "netconf-yang": { desc: "Enable NETCONF YANG server over SSH port 830", cr: true },
+      mls: { desc: "Multi-Layer Switching (QoS)", sub: { qos: { desc: "Enable QoS globally on Catalyst switch", cr: true } } },
+      "port-channel": {
+        desc: "EtherChannel global configuration",
+        sub: {
+          "load-balance": {
+            desc: "Load Balancing method",
+            sub: {
+              "src-mac": { desc: "Source MAC address", cr: true },
+              "dst-mac": { desc: "Destination MAC address", cr: true },
+              "src-dst-mac": { desc: "Source and destination MAC", cr: true },
+              "src-ip": { desc: "Source IP address", cr: true },
+              "dst-ip": { desc: "Destination IP address", cr: true },
+              "src-dst-ip": { desc: "Source and destination IP", cr: true },
+              "src-dst-port": { desc: "Source and destination TCP/UDP port", cr: true },
+            },
+          },
+        },
+      },
+      "snmp-server": {
+        desc: "Modify SNMP engine parameters",
+        sub: {
+          group: { desc: "Define a User Security Model group", sub: { "<group>": { desc: "Group name", sub: { v3: { desc: "SNMPv3", sub: { priv: { desc: "Authentication and encryption (authPriv)", cr: true }, auth: { desc: "Authentication only (authNoPriv)", cr: true }, noauth: { desc: "No auth/priv", cr: true } } } } } } },
+          user: {
+            desc: "Define a user who can access the SNMP engine",
+            sub: {
+              "<user>": {
+                desc: "Username",
+                sub: {
+                  "<group>": {
+                    desc: "Group name",
+                    sub: {
+                      v3: {
+                        desc: "SNMPv3",
+                        sub: {
+                          auth: {
+                            desc: "Authentication parameters",
+                            sub: {
+                              sha: {
+                                desc: "HMAC-SHA",
+                                sub: {
+                                  "<auth-pass>": {
+                                    desc: "Auth password",
+                                    sub: {
+                                      priv: {
+                                        desc: "Encryption parameters",
+                                        sub: {
+                                          aes: {
+                                            desc: "AES encryption",
+                                            sub: {
+                                              "128": {
+                                                desc: "128-bit AES",
+                                                sub: {
+                                                  "<priv-pass>": { desc: "Privacy key", cr: true },
+                                                },
+                                              },
+                                            },
+                                          },
+                                        },
+                                      },
+                                    },
+                                    cr: true,
+                                  },
+                                },
+                              },
+                              md5: {
+                                desc: "HMAC-MD5",
+                                sub: {
+                                  "<auth-pass>": { desc: "Auth password", cr: true },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          host: { desc: "Specify hosts to receive SNMP notifications", sub: { "<ip>": { desc: "NMS IP address", cr: true } } },
+          community: { desc: "Enable SNMPv1/v2c community string", sub: { "<string>": { desc: "Community string", sub: { ro: { desc: "Read-only", cr: true }, rw: { desc: "Read-write", cr: true } }, cr: true } } },
+        },
+      },
+      wlan: {
+        desc: "Configure Wireless LAN (WLC/IOS-XE)",
+        sub: {
+          "<ssid>": {
+            desc: "WLAN profile name",
+            sub: {
+              "<id>": { desc: "WLAN ID (1-512)", sub: { "<ssid-name>": { desc: "Broadcast SSID", cr: true } }, cr: true },
+              vlan: { desc: "Map WLAN to wired VLAN", sub: { "<1-4094>": { desc: "VLAN ID", cr: true } } },
+              security: { desc: "WLAN security policy", sub: { "wpa2-enterprise": { desc: "WPA2-Enterprise (802.1X RADIUS)", cr: true }, "wpa2-psk": { desc: "WPA2-Personal PSK", sub: { "<passphrase>": { desc: "Pre-shared key", cr: true } }, cr: true } } },
+            },
+          },
+        },
+      },
       no: {
         desc: "Negate a command or set its defaults",
         sub: {
@@ -339,7 +443,7 @@
           portfast: { desc: "Spanning tree portfast options", sub: { default: { desc: "Enable portfast by default on all access ports", cr: true }, bpduguard: { desc: "BPDU guard", sub: { default: { desc: "Enable bpduguard by default on all portfast ports", cr: true } } } } },
         },
       },
-      username: { desc: "Establish User Name Authentication", sub: { "<name>": { desc: "Username", sub: { secret: { desc: "Specify the secret password", sub: { "<password>": { desc: "Password", cr: true } } }, privilege: { desc: "Set user privilege level", sub: { "<0-15>": { desc: "Privilege level", cr: true } } } } } } },
+      username: { desc: "Establish User Name Authentication", sub: { "<name>": { desc: "Username", sub: { secret: { desc: "Specify the secret password", sub: { "<password>": { desc: "Password", cr: true } } }, privilege: { desc: "Set user privilege level", sub: { "<0-15>": { desc: "Privilege level", sub: { secret: { desc: "Specify the secret password", sub: { "<password>": { desc: "Password", cr: true } } } }, cr: true } } } } } } },
       vlan: { desc: "Vlan commands", sub: { "<1-4094>": { desc: "ISL VLAN ID (e.g. 10)", cr: true }, dot1q: { desc: "dot1q parameters", sub: { tag: { desc: "Tag native VLAN", sub: { native: { desc: "Tag native VLAN frames", cr: true } } } } } } },
     },
     "config-if": {
@@ -395,6 +499,7 @@
             },
           },
           "helper-address": { desc: "Specify a destination address for UDP broadcasts (DHCP relay)", sub: { "<ip>": { desc: "DHCP server IP address", cr: true } } },
+          mtu: { desc: "Set IP Maximum Transmission Unit", sub: { "<68-9216>": { desc: "MTU size in bytes (e.g. 1500)", cr: true } } },
           nat: { desc: "NAT interface commands", sub: { inside: { desc: "Inside interface for address translation", cr: true }, outside: { desc: "Outside interface for address translation", cr: true } } },
           ospf: {
             desc: "OSPF interface commands",
@@ -402,6 +507,9 @@
               priority: { desc: "Router priority for DR/BDR election", sub: { "<0-255>": { desc: "Priority (0=ineligible, 1-255)", cr: true } } },
               network: { desc: "Network type", sub: { "point-to-point": { desc: "Specify OSPF point-to-point network", cr: true }, broadcast: { desc: "Specify OSPF broadcast multi-access", cr: true } } },
               cost: { desc: "Interface cost", sub: { "<1-65535>": { desc: "Cost value", cr: true } } },
+              "hello-interval": { desc: "Time between HELLO packets", sub: { "<1-65535>": { desc: "Seconds (default 10)", cr: true } } },
+              "dead-interval": { desc: "Interval after which a neighbor is declared dead", sub: { "<1-65535>": { desc: "Seconds (default 40)", cr: true } } },
+              "mtu-ignore": { desc: "Ignores the MTU in DBD packets", cr: true },
               "<1-65535>": { desc: "Process ID", sub: { area: { desc: "Set the OSPF area ID", sub: { "<area-id>": { desc: "Area ID (e.g. 0)", cr: true } } } } },
             },
           },
@@ -451,8 +559,18 @@
               ip: { desc: "Enable HSRP and set the virtual IP address", sub: { "<vip>": { desc: "Virtual IP address", cr: true } } },
               priority: { desc: "Priority level", sub: { "<0-255>": { desc: "Priority value (default 100)", cr: true } } },
               preempt: { desc: "Overthrow lower priority Active routers", cr: true },
+              track: { desc: "Priority tracking", sub: { "<1-1000>": { desc: "Tracked object or interface", sub: { decrement: { desc: "Priority decrement", sub: { "<1-255>": { desc: "Decrement value (e.g. 60)", cr: true } } } }, cr: true } } },
             },
           },
+        },
+      },
+      mls: { desc: "Multi-Layer Switching interface QoS", sub: { qos: { desc: "QoS interface commands", sub: { trust: { desc: "Trust state for incoming packets", sub: { dscp: { desc: "Trust DSCP markings", cr: true }, cos: { desc: "Trust CoS markings", cr: true } } } } } } },
+      tunnel: {
+        desc: "Protocol-over-protocol tunneling",
+        sub: {
+          source: { desc: "Source of tunnel packets", sub: { ...IFACE_TYPE_SUB, "<ip>": { desc: "Source IP address", cr: true } } },
+          destination: { desc: "Destination of tunnel", sub: { "<ip>": { desc: "Destination public IP address", cr: true } } },
+          mode: { desc: "Tunnel encapsulation method", sub: { gre: { desc: "Generic Route Encapsulation protocol", sub: { ip: { desc: "Over IPv4", cr: true } } } } },
         },
       },
       switchport: {
@@ -562,6 +680,7 @@
       "default-router": { desc: "Default routers", sub: { "<ip>": { desc: "Gateway IP address", cr: true } } },
       "dns-server": { desc: "DNS servers", sub: { "<ip>": { desc: "DNS server IP address", cr: true } } },
       "domain-name": { desc: "Domain name", sub: { "<domain>": { desc: "Domain name", cr: true } } },
+      option: { desc: "Raw DHCP options (e.g. Option 43 for Cisco WLC)", sub: { "<1-254>": { desc: "DHCP option code (e.g. 43)", sub: { hex: { desc: "Hexadecimal string", sub: { "<hex>": { desc: "Hex payload", cr: true } } }, ip: { desc: "IP address", sub: { "<ip>": { desc: "Server IP", cr: true } } } } } } },
       do: { desc: "To run exec commands in config mode", sub: DO_SUB },
       exit: { desc: "Exit from DHCP pool configuration mode", cr: true },
       end: { desc: "Exit from configure mode", cr: true },
@@ -573,7 +692,7 @@
     const rough = raw.trim().split(/\s+/).filter(Boolean);
     const out = [];
     for (const tok of rough) {
-      const m = tok.match(/^(gigabitethernet|fastethernet|port-channel|loopback|gig|gi|g|fa|f|po|lo|vl|vlan)(\d[\d/.-]*)$/i);
+      const m = tok.match(/^(gigabitethernet|fastethernet|port-channel|loopback|tunnel|gig|gi|g|fa|f|po|lo|tu|vl|vlan)(\d[\d/.-]*)$/i);
       if (m) {
         out.push(m[1], m[2]);
       } else {

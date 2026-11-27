@@ -55,7 +55,7 @@
             <path d="M6 8.5 8 10l-2 1.5M10 11.5h3.5M7 17h6" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
           <span>Virtual Labs</span>
-          <span class="nav-count">25 Pool</span>
+          <span class="nav-count">45 Pool</span>
         </button>
 
         <button class="nav-item" data-view="analytics">
@@ -86,7 +86,7 @@
         <div class="readiness-card">
           <div class="readiness-header">
             <span>Exam Pool</span>
-            <strong class="text-cisco">1,500 Q / 25 Labs</strong>
+            <strong class="text-cisco">1,500 Q / 45 Labs</strong>
           </div>
           <div class="mini-bar">
             <div class="mini-bar-fill" id="sidebarProgressFill" style="width: 2%"></div>
@@ -450,7 +450,7 @@
         <div class="page-header-row">
           <div>
             <h1 class="page-h1">CCNA 200-301 Exam Simulator Dashboard</h1>
-            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 25-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,500-question pool).</p>
+            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 45-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,500-question pool).</p>
           </div>
           <button class="btn btn-primary" id="dashStartExamBtn">Start Fresh Exam (6 Labs → 100 Qs)</button>
         </div>
@@ -463,7 +463,7 @@
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Packet Tracer Lab Pool</span>
-            <strong class="kpi-val text-green">25 Labs</strong>
+            <strong class="kpi-val text-green">45 Labs</strong>
             <span class="kpi-sub">6 labs presented first (with Skip/Next)</span>
           </div>
           <div class="kpi-card">
@@ -497,11 +497,12 @@
       <section class="page-view view-section hidden" id="view-virtual-labs">
         <div class="page-header-row">
           <div>
-            <h1 class="page-h1">Packet Tracer Virtual Labs Pool (25 Labs)</h1>
-            <p class="page-sub">Complete CCNA 200-301 multi-device lab coverage: VLANs, 802.1Q Trunks, LACP &amp; PAgP EtherChannel, STP Root/PortFast/BPDU Guard, CDP &amp; LLDP, ROAS &amp; L3 SVIs, IPv4/IPv6 Default/Host/Floating Static Routes, OSPFv2 Election &amp; Troubleshooting, HSRPv2, NAT/PAT, DHCP Server/Relay, Standard &amp; Extended ACLs, Port Security (Protect/Restrict/Shutdown), Full SSHv2 Hardening, NTP, DHCP Snooping, DAI, and RESTCONF/NETCONF.</p>
+            <h1 class="page-h1">Packet Tracer Virtual Labs Pool (45 Labs)</h1>
+            <p class="page-sub">Complete CCNA 200-301 multi-device Build &amp; Break-Fix lab pool across all 6 domains: VLSM, Duplex/SFP Break-Fix, TCP/UDP Ports, Hypervisor/Container Trunks, VLANs, 802.1Q Native 99, LACP/PAgP, Rapid PVST+, WLC CAPWAP, CDP/LLDP, ROAS &amp; L3 SVIs, Dual-Stack Static/Host/Floating Routes, OSPFv2 Build &amp; 4-Router Break-Fix, HSRPv2 + Tracking, NAT/PAT, DHCP/NTP/Syslog/SNMPv3/QoS, Extended ACLs, Port Security/Snooping/DAI, Full SSHv2, GRE VPN Tunnels, RESTCONF/NETCONF, and Ansible Automation.</p>
           </div>
           <div class="drawer-filters" id="labCatalogFilters">
-            <button class="filter-chip active" data-labfilter="all">All (25)</button>
+            <button class="filter-chip active" data-labfilter="all">All (45)</button>
+            <button class="filter-chip" data-labfilter="enterprise">Enterprise Labs (20)</button>
             <button class="filter-chip" data-labfilter="passer">Passer Topics (13)</button>
             <button class="filter-chip" data-labfilter="blueprint">Blueprint Labs (12)</button>
           </div>
@@ -726,15 +727,16 @@ line vty 0 15 -&gt; login local | transport input ssh</pre>
     </div>
   </div>
 
-  <!-- Offline Data Pools (1,500 CCNA v1.1 Questions + 25 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
-  <script src="data/ios_cli.js?v=9"></script>
-  <script src="data/questions.js?v=9"></script>
-  <script src="data/questions_vol1.js?v=9"></script>
-  <script src="data/questions_vol2.js?v=9"></script>
-  <script src="data/questions_vol3.js?v=9"></script>
-  <script src="data/questions_vol4.js?v=9"></script>
-  <script src="data/questions_vol5.js?v=9"></script>
-  <script src="data/labs.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <!-- Offline Data Pools (1,500 CCNA v1.1 Questions + 45 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
+  <script src="data/ios_cli.js?v=10"></script>
+  <script src="data/questions.js?v=10"></script>
+  <script src="data/questions_vol1.js?v=10"></script>
+  <script src="data/questions_vol2.js?v=10"></script>
+  <script src="data/questions_vol3.js?v=10"></script>
+  <script src="data/questions_vol4.js?v=10"></script>
+  <script src="data/questions_vol5.js?v=10"></script>
+  <script src="data/labs.js?v=10"></script>
+  <script src="data/labs_enterprise.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

@@ -1374,7 +1374,8 @@
     const grid = document.getElementById("labCatalogGrid");
     const filtered = LAB_POOL.filter((l) => {
       if (state.labCatalogFilter === "passer") return l.passerTag.startsWith("Passer Lab");
-      if (state.labCatalogFilter === "blueprint") return !l.passerTag.startsWith("Passer Lab");
+      if (state.labCatalogFilter === "enterprise") return l.passerTag.startsWith("Enterprise Lab");
+      if (state.labCatalogFilter === "blueprint") return l.passerTag.startsWith("Blueprint Lab");
       return true;
     });
 

@@ -86,7 +86,7 @@
         <div class="readiness-card">
           <div class="readiness-header">
             <span>Exam Pool</span>
-            <strong class="text-cisco">1,100 Q / 25 Labs</strong>
+            <strong class="text-cisco">1,500 Q / 25 Labs</strong>
           </div>
           <div class="mini-bar">
             <div class="mini-bar-fill" id="sidebarProgressFill" style="width: 2%"></div>
@@ -450,7 +450,7 @@
         <div class="page-header-row">
           <div>
             <h1 class="page-h1">CCNA 200-301 Exam Simulator Dashboard</h1>
-            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 25-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,100-question pool).</p>
+            <p class="page-sub">Each exam starts with 6 randomized Cisco Packet Tracer-style labs (from a 25-lab pool) followed by 100 blueprint-weighted CCNA questions (from a 1,500-question pool).</p>
           </div>
           <button class="btn btn-primary" id="dashStartExamBtn">Start Fresh Exam (6 Labs → 100 Qs)</button>
         </div>
@@ -458,7 +458,7 @@
         <div class="kpi-grid">
           <div class="kpi-card">
             <span class="kpi-label">Total Question Pool</span>
-            <strong class="kpi-val text-cisco">1,100</strong>
+            <strong class="kpi-val text-cisco">1,500</strong>
             <span class="kpi-sub">100 unique weighted questions per exam</span>
           </div>
           <div class="kpi-card">
@@ -690,7 +690,7 @@ line vty 0 15 -&gt; login local | transport input ssh</pre>
           <div class="setting-row">
             <div>
               <strong>No-Repeat Question &amp; Lab Deck</strong>
-              <p class="card-desc" id="unseenDeckStatus">Tracks seen questions so 11 consecutive exams (1,100 questions) never repeat.</p>
+              <p class="card-desc" id="unseenDeckStatus">Tracks seen questions so 15 consecutive exams (1,500 questions) never repeat.</p>
             </div>
             <button class="btn btn-secondary" id="resetDeckBtn">Reset Seen Deck</button>
           </div>
@@ -726,11 +726,15 @@ line vty 0 15 -&gt; login local | transport input ssh</pre>
     </div>
   </div>
 
-  <!-- Offline Data Pools (1,100 CCNA v1.1 Questions + 25 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
-  <script src="data/ios_cli.js?v=8"></script>
-  <script src="data/questions.js?v=8"></script>
-  <script src="data/questions_vol1.js?v=8"></script>
-  <script src="data/labs.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <!-- Offline Data Pools (1,500 CCNA v1.1 Questions + 25 Multi-Device Labs + Full Cisco IOS CLI Engine) -->
+  <script src="data/ios_cli.js?v=9"></script>
+  <script src="data/questions.js?v=9"></script>
+  <script src="data/questions_vol1.js?v=9"></script>
+  <script src="data/questions_vol2.js?v=9"></script>
+  <script src="data/questions_vol3.js?v=9"></script>
+  <script src="data/questions_vol4.js?v=9"></script>
+  <script src="data/questions_vol5.js?v=9"></script>
+  <script src="data/labs.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

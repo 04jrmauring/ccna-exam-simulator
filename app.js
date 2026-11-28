@@ -209,6 +209,7 @@
       deviceSessions,
       completedIds,
       skipped: false,
+      showConfigs: false,
       selectedNodeId: primaryNode ? primaryNode.id : "N1",
     };
   }
@@ -312,6 +313,9 @@
     cliHiddenInput: document.getElementById("cliHiddenInput"),
     cliVerifyBtn: document.getElementById("cliVerifyBtn"),
     cliSolutionBtn: document.getElementById("cliSolutionBtn"),
+    ptShowConfigsBtn: document.getElementById("ptShowConfigsBtn"),
+    ptRevealConfigsBtn: document.getElementById("ptRevealConfigsBtn"),
+    ptCorrectConfigsBox: document.getElementById("ptCorrectConfigsBox"),
     resetLabBtn: document.getElementById("resetLabBtn"),
     prevLabBtn: document.getElementById("prevLabBtn"),
     nextLabBtn: document.getElementById("nextLabBtn"),
@@ -617,7 +621,66 @@
     el.cliBody.scrollTop = el.cliBody.scrollHeight;
 
     el.cliSolutionBtn.classList.toggle("hidden", !state.studyMode && !state.submitted);
+    renderCorrectConfigsPanel(ls);
     updateProgressIndicators();
+  }
+
+  function renderCorrectConfigsPanel(ls) {
+    if (!el.ptCorrectConfigsBox || !el.ptRevealConfigsBtn) return;
+    const isOpen = Boolean(ls && ls.showConfigs);
+    el.ptCorrectConfigsBox.classList.toggle("hidden", !isOpen);
+    el.ptRevealConfigsBtn.classList.toggle("active", isOpen);
+    if (el.ptShowConfigsBtn) el.ptShowConfigsBtn.classList.toggle("active", isOpen);
+    el.ptRevealConfigsBtn.querySelector("span").textContent = isOpen
+      ? "✕ Hide Correct Configs"
+      : "📖 Stuck? Show All Correct Configs";
+
+    if (!isOpen || !ls) {
+      el.ptCorrectConfigsBox.innerHTML = "";
+      return;
+    }
+
+    const sols = ls.lab.solutions || {};
+    const devs = ls.lab.devices || Object.keys(sols);
+
+    el.ptCorrectConfigsBox.innerHTML = `
+      <div class="pt-cfg-intro">Complete Cisco IOS configuration commands for <strong>${escapeHtml(ls.lab.id)}</strong>. Type these into each device's CLI (shortened commands work too):</div>
+    `;
+
+    devs.forEach((devName) => {
+      const cmds = sols[devName] || [];
+      const fullLines = ["enable", "configure terminal", ...cmds, "end", "write memory"];
+      const scriptText = fullLines.join("\n");
+
+      const card = document.createElement("div");
+      card.className = "pt-cfg-dev-card";
+      card.innerHTML = `
+        <div class="pt-cfg-dev-head">
+          <span class="pt-cfg-dev-name">${escapeHtml(devName)} (${cmds.length} config lines)</span>
+          <div class="pt-cfg-dev-actions">
+            <button type="button" class="pt-cfg-mini-btn pt-cfg-open-btn">Open ${escapeHtml(devName)} CLI</button>
+            <button type="button" class="pt-cfg-mini-btn pt-cfg-copy-btn">Copy</button>
+          </div>
+        </div>
+        <pre class="pt-cfg-pre">${escapeHtml(scriptText)}</pre>
+      `;
+
+      card.querySelector(".pt-cfg-open-btn").addEventListener("click", () => {
+        switchLabDevice(ls, devName);
+      });
+      card.querySelector(".pt-cfg-copy-btn").addEventListener("click", (e) => {
+        const btn = e.currentTarget;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(scriptText).then(() => {
+            btn.textContent = "Copied!";
+            setTimeout(() => { btn.textContent = "Copy"; }, 1400);
+          }).catch(() => {});
+        }
+        showToast(`Copied ${devName} configuration to clipboard.`);
+      });
+
+      el.ptCorrectConfigsBox.appendChild(card);
+    });
   }
 
   // Scale lab coordinates from 460x238 to Packet Tracer 680x285 spacious canvas
@@ -1919,6 +1982,18 @@
     if (cliTabBtn) cliTabBtn.click();
     showContextHelp(el.cliHiddenInput.value);
   });
+
+  function toggleLabCorrectConfigs() {
+    const ls = state.examLabs[state.currentLabIdx];
+    if (!ls) return;
+    ls.showConfigs = !ls.showConfigs;
+    renderCorrectConfigsPanel(ls);
+    if (ls.showConfigs && el.ptCorrectConfigsBox) {
+      el.ptCorrectConfigsBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+  if (el.ptShowConfigsBtn) el.ptShowConfigsBtn.addEventListener("click", toggleLabCorrectConfigs);
+  if (el.ptRevealConfigsBtn) el.ptRevealConfigsBtn.addEventListener("click", toggleLabCorrectConfigs);
 
   el.cliVerifyBtn.addEventListener("click", () => executeCliCommand("verify"));
   el.cliSolutionBtn.addEventListener("click", () => {

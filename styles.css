@@ -1095,3 +1095,123 @@ code, pre, .mono { font-family: var(--font-mono); }
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   LAB CORRECT CONFIGS REFERENCE ("STUCK? SHOW ALL CORRECT CONFIGS")
+   ============================================================================ */
+.pt-tool-btn.pt-configs-btn {
+  border-color: rgba(192, 132, 252, 0.42);
+  background: rgba(168, 85, 247, 0.14);
+  color: #e9d5ff;
+}
+.pt-tool-btn.pt-configs-btn:hover,
+.pt-tool-btn.pt-configs-btn.active {
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.28);
+  color: #fff;
+}
+
+.pt-stuck-bar {
+  margin-top: 12px;
+}
+
+.pt-reveal-configs-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 12.4px;
+  font-weight: 700;
+  color: #e9d5ff;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(4, 159, 217, 0.16));
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  transition: all 0.15s ease;
+}
+.pt-reveal-configs-btn:hover {
+  border-color: #c084fc;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.32), rgba(4, 159, 217, 0.24));
+  color: #fff;
+}
+.pt-reveal-configs-btn.active {
+  background: rgba(168, 85, 247, 0.28);
+  border-color: #c084fc;
+  color: #fff;
+}
+
+.pt-correct-configs-box {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 11px;
+  border-radius: 10px;
+  background: rgba(6, 11, 20, 0.88);
+  border: 1px solid rgba(192, 132, 252, 0.36);
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.pt-cfg-intro {
+  font-size: 11.4px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.pt-cfg-dev-card {
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.pt-cfg-dev-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(30, 41, 59, 0.72);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pt-cfg-dev-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cisco-cyan);
+  font-family: var(--font-mono);
+}
+
+.pt-cfg-dev-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pt-cfg-mini-btn {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 10.8px;
+  font-weight: 600;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-strong);
+  transition: all 0.14s ease;
+}
+.pt-cfg-mini-btn:hover {
+  border-color: var(--cisco-cyan);
+  color: #fff;
+}
+
+.pt-cfg-pre {
+  margin: 0;
+  padding: 9px 10px;
+  font-family: var(--font-mono);
+  font-size: 11.4px;
+  line-height: 1.55;
+  color: #bbf7d0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

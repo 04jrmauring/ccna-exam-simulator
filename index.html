@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CCNA 200-301 — Cisco Packet Tracer Lab &amp; 100Q Exam Simulator</title>
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
 <body>
   <div class="app-shell">
@@ -212,6 +212,9 @@
                 <button class="pt-tool-btn" id="ptHelpQueryBtn" title="Show Available Configs (?) for Current IOS Mode">
                   <span>? Config Help</span>
                 </button>
+                <button class="pt-tool-btn pt-configs-btn" id="ptShowConfigsBtn" title="Stuck? View all correct Cisco IOS configs for every device in this lab">
+                  <span>📖 Show Correct Configs</span>
+                </button>
                 <button class="pt-tool-btn pt-verify-btn" id="cliVerifyBtn" title="Check Results / Verify Config">
                   <span>✓ Check Results</span>
                 </button>
@@ -334,6 +337,14 @@
                 <p class="pt-cli-tip-note">
                   Start on each device from User EXEC (<code>&gt;</code>): enter <code>en</code> &rarr; <code>conf t</code>, use <code>?</code> anytime to inspect available commands, and use shortened IOS syntax like <code>ex</code>, <code>int g0/0</code>, <code>no sh</code>, or <code>sw mo tr</code>. When every requirement across all devices is configured, <strong>DONE</strong> will appear automatically.
                 </p>
+
+                <div class="pt-stuck-bar">
+                  <button type="button" class="pt-reveal-configs-btn" id="ptRevealConfigsBtn">
+                    <span>📖 Stuck? Show All Correct Configs</span>
+                  </button>
+                </div>
+
+                <div class="pt-correct-configs-box hidden" id="ptCorrectConfigsBox" aria-label="Correct Cisco IOS Configurations"></div>
 
                 <div class="pt-helper-note" id="ptSkipNotice">
                   <strong>Can't finish this lab?</strong> You can click <strong>Next Lab (Skip) &gt;</strong> below to move on and still reach the 100-question exam.
@@ -740,6 +751,6 @@ line vty 0 15 -&gt; login local | transport input ssh</pre>
   <script src="data/drag_drops.js?v=11"></script>
   <script src="data/labs.js?v=11"></script>
   <script src="data/labs_enterprise.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

@@ -333,6 +333,7 @@
     qBadge: document.getElementById("qBadge"),
     qPoolId: document.getElementById("qPoolId"),
     questionStem: document.getElementById("questionStem"),
+    questionExhibit: document.getElementById("questionExhibit"),
     optionsList: document.getElementById("optionsList"),
     explainToggle: document.getElementById("explainToggle"),
     explanationBox: document.getElementById("explanationBox"),
@@ -392,6 +393,10 @@
       if (!ans || typeof ans !== "object") return false;
       return q.targets.every((t) => Boolean(ans[t.id]));
     }
+    if (q.type === "multi") {
+      const need = q.chooseCount || (Array.isArray(q.correct) ? q.correct.length : 2);
+      return Array.isArray(ans) && ans.length === need;
+    }
     return Boolean(ans);
   }
 
@@ -408,6 +413,13 @@
         if (!isDragDropSlotCorrect(t, placed)) return false;
       }
       return true;
+    }
+    if (q.type === "multi") {
+      if (!Array.isArray(ans) || !Array.isArray(q.correct)) return false;
+      if (ans.length !== q.correct.length) return false;
+      const a = ans.slice().sort().join(",");
+      const b = q.correct.slice().sort().join(",");
+      return a === b;
     }
     return ans === q.correct;
   }
@@ -1501,27 +1513,135 @@
     return wrap;
   }
 
+  function renderExhibitTopologySvg(topo) {
+    const nodes = topo.nodes || [];
+    const links = topo.links || [];
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const w = topo.width || 460;
+    const h = topo.height || 120;
+
+    let svgParts = [];
+    links.forEach((lnk) => {
+      const a = nodeMap.get(lnk.from);
+      const b = nodeMap.get(lnk.to);
+      if (!a || !b) return;
+      const dy = lnk.offset || 0;
+      const y1 = a.y + dy;
+      const y2 = b.y + dy;
+      svgParts.push(`<line x1="${a.x}" y1="${y1}" x2="${b.x}" y2="${y2}" stroke="#1e293b" stroke-width="2.4" />`);
+      if (lnk.leftLabel) {
+        const lx = a.x + (b.x - a.x) * 0.28;
+        const ly = y1 + (dy < 0 ? -7 : dy > 0 ? 14 : -8);
+        svgParts.push(`<text x="${lx}" y="${ly}" font-size="10.5" font-family="JetBrains Mono, monospace" font-weight="600" fill="#0f172a" text-anchor="middle">${escapeHtml(lnk.leftLabel)}</text>`);
+      }
+      if (lnk.rightLabel) {
+        const rx = a.x + (b.x - a.x) * 0.72;
+        const ry = y2 + (dy < 0 ? -7 : dy > 0 ? 14 : -8);
+        svgParts.push(`<text x="${rx}" y="${ry}" font-size="10.5" font-family="JetBrains Mono, monospace" font-weight="600" fill="#0f172a" text-anchor="middle">${escapeHtml(lnk.rightLabel)}</text>`);
+      }
+      if (lnk.midLabel) {
+        const mx = (a.x + b.x) / 2;
+        const my = (y1 + y2) / 2 - 8;
+        svgParts.push(`<text x="${mx}" y="${my}" font-size="10.5" font-family="JetBrains Mono, monospace" font-weight="600" fill="#0369a1" text-anchor="middle">${escapeHtml(lnk.midLabel)}</text>`);
+      }
+    });
+
+    nodes.forEach((n) => {
+      if (n.type === "router") {
+        svgParts.push(`
+          <g transform="translate(${n.x}, ${n.y})">
+            <ellipse cx="0" cy="8" rx="28" ry="11" fill="#0f172a" stroke="#049fd9" stroke-width="1.6"/>
+            <rect x="-28" y="-8" width="56" height="16" fill="#0f172a"/>
+            <ellipse cx="0" cy="-8" rx="28" ry="11" fill="#1e293b" stroke="#38bdf8" stroke-width="1.6"/>
+            <path d="M-12 -11 L12 -5 M12 -11 L-12 -5" stroke="#e0f2fe" stroke-width="1.7" stroke-linecap="round"/>
+            <text x="0" y="13" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">${escapeHtml(n.label)}</text>
+          </g>
+        `);
+      } else if (n.type === "switch") {
+        svgParts.push(`
+          <g transform="translate(${n.x}, ${n.y})">
+            <polygon points="-28,-12 20,-12 30,-2 -18,-2" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+            <rect x="-28" y="-2" width="48" height="18" fill="#0f172a" stroke="#049fd9" stroke-width="1.5"/>
+            <polygon points="20,-12 30,-2 30,16 20,6" fill="#0c1527" stroke="#049fd9" stroke-width="1.2"/>
+            <path d="M-14 -8 L10 -8 M-8 -5 L16 -5" stroke="#e0f2fe" stroke-width="1.5" stroke-linecap="round"/>
+            <text x="-4" y="11" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">${escapeHtml(n.label)}</text>
+          </g>
+        `);
+      } else {
+        const bw = Math.max(58, Math.round(n.label.length * 6.8 + 18));
+        svgParts.push(`
+          <g transform="translate(${n.x}, ${n.y})">
+            <rect x="${-bw / 2}" y="-14" width="${bw}" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+            <text x="0" y="4" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">${escapeHtml(n.label)}</text>
+          </g>
+        `);
+      }
+    });
+
+    return `<div class="exhibit-topo-wrap"><svg class="exhibit-topo-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Network topology diagram">${svgParts.join("")}</svg></div>`;
+  }
+
+  function renderQuestionExhibit(exhibit) {
+    if (!el.questionExhibit) return;
+    if (!exhibit) {
+      el.questionExhibit.classList.add("hidden");
+      el.questionExhibit.innerHTML = "";
+      return;
+    }
+    el.questionExhibit.classList.remove("hidden");
+    const parts = [];
+    parts.push(`<div class="exhibit-header"><span>${escapeHtml(exhibit.title || "Exhibit")}</span><span>CCNA Reference</span></div>`);
+    if (exhibit.topology) {
+      parts.push(renderExhibitTopologySvg(exhibit.topology));
+    }
+    if (exhibit.table && Array.isArray(exhibit.table.headers) && Array.isArray(exhibit.table.rows)) {
+      const ths = exhibit.table.headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+      const trs = exhibit.table.rows
+        .map((r) => `<tr>${r.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+        .join("");
+      parts.push(`<div class="exhibit-table-wrap"><table class="exhibit-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`);
+    }
+    if (exhibit.code) {
+      parts.push(`<pre class="exhibit-code">${escapeHtml(exhibit.code)}</pre>`);
+    }
+    el.questionExhibit.innerHTML = parts.join("");
+  }
+
   function renderQuestion() {
     const q = state.examQuestions[state.currentQIdx];
     if (!q) return;
 
     const isDragDrop = q.type === "drag-drop";
-    const selectedKey = !isDragDrop ? (state.answers[q.examNumber] || null) : null;
+    const isMulti = q.type === "multi";
+    const chooseCount = isMulti ? (q.chooseCount || (Array.isArray(q.correct) ? q.correct.length : 2)) : 1;
+    const selectedKey = !isDragDrop && !isMulti ? (state.answers[q.examNumber] || null) : null;
+    const selectedArr = isMulti && Array.isArray(state.answers[q.examNumber]) ? state.answers[q.examNumber] : [];
     const isFlagged = state.flagged.has(q.examNumber);
     const answeredTotal = answeredQuestionsCount();
     const pctPos = Math.round(((state.currentQIdx + 1) / state.examQuestions.length) * 100);
 
     el.domainBadge.textContent = q.section;
     el.subtopicBadge.textContent = q.subtopic;
-    if (el.qTypeBadge) el.qTypeBadge.classList.toggle("hidden", !isDragDrop);
+    if (el.qTypeBadge) {
+      if (isDragDrop) {
+        el.qTypeBadge.textContent = "Drag & Drop";
+        el.qTypeBadge.classList.remove("hidden");
+      } else if (isMulti) {
+        el.qTypeBadge.textContent = `Choose ${chooseCount}`;
+        el.qTypeBadge.classList.remove("hidden");
+      } else {
+        el.qTypeBadge.classList.add("hidden");
+      }
+    }
     el.flaggedBadge.classList.toggle("hidden", !isFlagged);
     el.questionCounter.textContent = `Question ${q.examNumber} of ${state.examQuestions.length}`;
     el.progressStats.textContent = `${answeredTotal} Answered • ${state.flagged.size} Flagged`;
     el.progressFill.style.width = `${pctPos}%`;
 
     el.qBadge.textContent = `Q${q.examNumber}`;
-    el.qPoolId.textContent = `Pool ID: ${q.id} • Blueprint Section ${q.sectionCode}${isDragDrop ? " • Interactive Drag & Drop" : ""}`;
+    el.qPoolId.textContent = `Pool ID: ${q.id} • Blueprint Section ${q.sectionCode}${isDragDrop ? " • Interactive Drag & Drop" : isMulti ? ` • Multi-Select (Choose ${chooseCount})` : ""}`;
     el.questionStem.textContent = q.stem;
+    renderQuestionExhibit(q.exhibit || null);
 
     const canReveal = state.submitted || (state.studyMode && state.showExplanation);
 
@@ -1530,6 +1650,64 @@
       el.optionsList.setAttribute("role", "region");
       el.optionsList.setAttribute("aria-label", "Interactive drag and drop matching area");
       el.optionsList.appendChild(renderDragDropBoard(q, canReveal));
+    } else if (isMulti) {
+      el.optionsList.setAttribute("role", "group");
+      el.optionsList.setAttribute("aria-label", `Select ${chooseCount} answer choices`);
+
+      const hintBar = document.createElement("div");
+      hintBar.className = "multi-hint-bar";
+      hintBar.innerHTML = `<span>Select exactly <strong>${chooseCount}</strong> answers.</span><span class="mono">${selectedArr.length} / ${chooseCount} selected</span>`;
+      el.optionsList.appendChild(hintBar);
+
+      const correctSet = new Set(Array.isArray(q.correct) ? q.correct : []);
+      q.options.forEach((opt) => {
+        const isSelected = selectedArr.includes(opt.key);
+        const isCorrectOpt = correctSet.has(opt.key);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        let cls = "option-card";
+        if (isSelected) cls += " selected";
+        if (canReveal && isCorrectOpt) cls += " correct-reveal";
+        else if (canReveal && isSelected && !isCorrectOpt) cls += " wrong-reveal";
+
+        btn.className = cls;
+        btn.setAttribute("role", "checkbox");
+        btn.setAttribute("aria-checked", String(isSelected));
+
+        let tagHtml = "";
+        if (canReveal && isCorrectOpt) {
+          tagHtml = '<span class="option-selected-tag" style="color:#86efac;background:rgba(34,197,94,0.2)">Correct</span>';
+        } else if (canReveal && isSelected && !isCorrectOpt) {
+          tagHtml = '<span class="option-selected-tag" style="color:#fca5a5;background:rgba(239,68,68,0.2)">Your Pick</span>';
+        } else if (isSelected) {
+          tagHtml = '<span class="option-selected-tag">Selected</span>';
+        }
+
+        btn.innerHTML = `
+          <span class="checkbox-outer">${isSelected || (canReveal && isCorrectOpt) ? "✓" : ""}</span>
+          <span class="option-letter">${opt.key}.</span>
+          <span class="option-text">${escapeHtml(opt.text)}</span>
+          ${tagHtml}
+        `;
+        btn.addEventListener("click", () => {
+          if (state.submitted) return;
+          const next = selectedArr.slice();
+          const idx = next.indexOf(opt.key);
+          if (idx >= 0) {
+            next.splice(idx, 1);
+          } else {
+            if (next.length >= chooseCount) {
+              showToast(`Choose only ${chooseCount} options — uncheck one first to change your selection.`);
+              return;
+            }
+            next.push(opt.key);
+          }
+          if (next.length === 0) delete state.answers[q.examNumber];
+          else state.answers[q.examNumber] = next;
+          renderQuestion();
+        });
+        el.optionsList.appendChild(btn);
+      });
     } else {
       el.optionsList.setAttribute("role", "radiogroup");
       el.optionsList.setAttribute("aria-label", "Answer choices");
@@ -1581,6 +1759,9 @@
     el.explanationBox.classList.toggle("hidden", !shouldShowExp);
     if (isDragDrop) {
       el.explanationBox.innerHTML = `<strong>Drag &amp; Drop Explanation:</strong> ${escapeHtml(q.explanation)}`;
+    } else if (isMulti) {
+      const ansLabel = Array.isArray(q.correct) ? q.correct.join(", ") : q.correct;
+      el.explanationBox.innerHTML = `<strong>Correct Answers: ${escapeHtml(ansLabel)}</strong> &mdash; ${escapeHtml(q.explanation)}`;
     } else {
       el.explanationBox.innerHTML = `<strong>Correct Answer: ${q.correct}</strong> &mdash; ${escapeHtml(q.explanation)}`;
     }
@@ -1717,6 +1898,14 @@
   // DASHBOARD, 20-LAB CATALOG & ANALYTICS
   // ============================================================================
   function renderDashboard() {
+    const totalPool = QUESTION_POOL.length + DRAG_DROP_POOL.length;
+    const sidebarPoolEl = document.getElementById("sidebarPoolCount");
+    if (sidebarPoolEl) sidebarPoolEl.textContent = `${totalPool.toLocaleString()} Q / ${LAB_POOL.length} Labs`;
+    const kpiTotalEl = document.getElementById("kpiTotalPool");
+    if (kpiTotalEl) kpiTotalEl.textContent = totalPool.toLocaleString();
+    const kpiSubEl = document.getElementById("kpiPoolSub");
+    if (kpiSubEl) kpiSubEl.textContent = `${QUESTION_POOL.length.toLocaleString()} MCQs + ${DRAG_DROP_POOL.length} Drag & Drops (12–15/exam)`;
+
     const hist = loadHistory();
     document.getElementById("kpiAttempts").textContent = String(hist.length);
     if (hist.length > 0) {
@@ -1729,16 +1918,19 @@
       document.getElementById("kpiPassRate").textContent = "Submit an exam to record your score";
     }
 
-    document.getElementById("blueprintTable").innerHTML = BLUEPRINT.map(
-      (b) => `
+    document.getElementById("blueprintTable").innerHTML = BLUEPRINT.map((b) => {
+      const liveCount =
+        QUESTION_POOL.filter((q) => q.sectionCode === b.code).length +
+        DRAG_DROP_POOL.filter((d) => d.sectionCode === b.code).length;
+      return `
       <div class="bp-row">
         <div class="bp-top">
           <span><strong>${escapeHtml(b.name)}</strong></span>
-          <span class="mono text-cisco">${b.weight}% &bull; ${b.poolCount} Pool &rarr; ${b.examCount}/Exam</span>
+          <span class="mono text-cisco">${b.weight}% &bull; ${liveCount} Pool &rarr; ${b.examCount}/Exam</span>
         </div>
         <div class="bp-bar-track"><div class="bp-bar-fill" style="width:${b.weight * 3.5}%"></div></div>
-      </div>`
-    ).join("");
+      </div>`;
+    }).join("");
 
     const histEl = document.getElementById("recentHistoryList");
     if (hist.length === 0) {

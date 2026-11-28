@@ -1215,3 +1215,157 @@ code, pre, .mono { font-family: var(--font-mono); }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ============================================================================
+   QUESTION EXHIBITS (TOPOLOGY DIAGRAMS, CLI OUTPUTS & DATA TABLES) + MULTI-SELECT
+   ============================================================================ */
+.question-stem,
+.option-text {
+  white-space: pre-line;
+}
+
+.question-exhibit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(6, 11, 20, 0.85);
+  border: 1px solid rgba(0, 188, 235, 0.28);
+}
+
+.exhibit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cisco-cyan);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.exhibit-code {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #040812;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  font-family: var(--font-mono);
+  font-size: 12.4px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.exhibit-topo-wrap {
+  background: linear-gradient(180deg, #eef4fa 0%, #e2ecf6 100%);
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.exhibit-topo-svg {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  display: block;
+}
+
+.exhibit-table-wrap {
+  overflow-x: auto;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.exhibit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.6px;
+  background: #060b14;
+}
+
+.exhibit-table th,
+.exhibit-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-right: 1px solid rgba(148, 163, 184, 0.08);
+  vertical-align: top;
+}
+
+.exhibit-table th:last-child,
+.exhibit-table td:last-child {
+  border-right: none;
+}
+
+.exhibit-table th {
+  background: rgba(30, 41, 59, 0.85);
+  color: var(--cisco-cyan);
+  font-size: 11.4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.exhibit-table tr:last-child td {
+  border-bottom: none;
+}
+
+.exhibit-table td {
+  color: #e2e8f0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.checkbox-outer {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: all 0.14s ease;
+  font-size: 11px;
+  font-weight: 800;
+  color: transparent;
+}
+
+.option-card.selected .checkbox-outer {
+  border-color: var(--cisco-cyan);
+  background: var(--cisco-blue);
+  color: #fff;
+}
+
+.option-card.correct-reveal .checkbox-outer {
+  border-color: #22c55e;
+  background: #16a34a;
+  color: #fff;
+}
+
+.option-card.wrong-reveal .checkbox-outer {
+  border-color: #ef4444;
+  background: #dc2626;
+  color: #fff;
+}
+
+.multi-hint-bar {
+  font-size: 12px;
+  color: var(--cisco-cyan);
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: rgba(0, 188, 235, 0.1);
+  border: 1px solid rgba(0, 188, 235, 0.25);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
